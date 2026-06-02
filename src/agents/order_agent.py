@@ -1,0 +1,1 @@
+"""Handles order-related queries."""

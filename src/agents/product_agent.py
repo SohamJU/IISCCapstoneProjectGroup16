@@ -1,0 +1,1 @@
+"""Handles product-related queries."""
