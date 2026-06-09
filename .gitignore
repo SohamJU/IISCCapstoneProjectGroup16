@@ -145,14 +145,27 @@ rabbitmq-data/
 activemq-data/
 
 # SageMath parsed files
-*.sage.py
+*.sage.py 
+# Data
 
+data/raw/
+
+data/processed/
+
+# Vector DB
+
+vector_db/
+
+# Mac
+
+.DS_Store
 # Environments
 .env
 .envrc
 .venv
 env/
 venv/
+.emenv/
 ENV/
 env.bak/
 venv.bak/
