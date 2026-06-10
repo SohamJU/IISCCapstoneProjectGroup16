@@ -29,10 +29,7 @@ def load_electronics_reviews():
 
     return df
 
-#How To Load Dataset in other modules
-#from src.data.loaders import load_electronics_reviews
-#df = load_electronics_reviews()
-#print(df.head())
+
 
 
 

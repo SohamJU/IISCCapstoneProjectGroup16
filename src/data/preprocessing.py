@@ -15,7 +15,7 @@ def preprocess_ratings(
     min_user_interactions: int = 5,
     min_product_interactions: int = 5
 ) -> pd.DataFrame:
-    """
+    """s
     Preprocess Amazon Electronics ratings dataset.
 
     Steps:
@@ -23,8 +23,8 @@ def preprocess_ratings(
     2. Remove missing values
     3. Convert timestamp to datetime
     4. Keep valid ratings only
-    5. Remove inactive users
-    6. Remove unpopular products
+    5. Remove inactive users - Disabled
+    6. Remove unpopular products - Disabled
     """
 
     print(f"Initial shape: {df.shape}")
@@ -47,7 +47,7 @@ def preprocess_ratings(
         (df["rating"] <= 5.0)
     ]
 
-    # Filter inactive users
+    '''# Filter inactive users
     active_users = (
         df["user_id"]
         .value_counts()
@@ -73,7 +73,7 @@ def preprocess_ratings(
 
     df = df[
         df["product_id"].isin(popular_products)
-    ]
+    ]'''
 
     print(f"Final shape: {df.shape}")
 
