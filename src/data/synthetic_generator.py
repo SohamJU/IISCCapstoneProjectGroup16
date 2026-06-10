@@ -1,36 +1,24 @@
-"""
-Synthetic E-Commerce Query Generator (Hugging Face API)
-
-- IFT LLM prompting for realistic query generation
-- Uses HF Inference API
-- Batched synthetic query generation
-- Intent-aware prompting
-- Deduplication + CSV export
-"""
-
+import random
+import pandas as pd
 from pathlib import Path
 from datetime import datetime
-import pandas as pd
-import json
-import os
-import requests
 
+"""
+Synthetic Customer Query Generator
 
-# ----------------------------
-# CONFIG
-# ----------------------------
+Generates realistic e-commerce customer support queries using:
+- Intent-driven sampling (single + multi-intent)
+- Persona-based behavior simulation (angry, polite, confused, etc.)
+- Dynamic language construction (no templates)
+- Noise injection (typos, fillers, urgency signals)
+- Real-world query styles (structured, conversational, fragment-based)
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SYNTHETIC_DATA_DIR = PROJECT_ROOT / "data" / "synthetic"
+Returns a pandas DataFrame with synthetic queries and primary intent labels.
+"""
 
-HF_TOKEN = os.getenv("HF_TOKEN")  # safest approach
-
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
-
-HEADERS = {
-    "Authorization": f"Bearer {HF_TOKEN}"
-}
-
+# -----------------------------------------------------------------------------
+# INTENTS
+# -----------------------------------------------------------------------------
 
 INTENT_GROUPS = [
     ["product_search", "product_recommendation", "product_comparison"],
@@ -40,135 +28,232 @@ INTENT_GROUPS = [
     ["complaints", "delivery_issues"],
 ]
 
+ALL_INTENTS = [i for group in INTENT_GROUPS for i in group]
 
-# ----------------------------
-# PROMPT
-# ----------------------------
 
-def build_prompt(batch_size: int, intents: list[str]) -> str:
-    intent_text = "\n".join([f"- {i}" for i in intents])
+# -----------------------------------------------------------------------------
+# DOMAIN VOCAB
+# -----------------------------------------------------------------------------
 
-    return f"""
-Generate {batch_size} realistic e-commerce customer support queries.
-
-Cover these intents:
-{intent_text}
-
-Rules:
-- natural human language
-- mix short/long queries
-- include typos, frustration, polite tone
-- ambiguous and incomplete queries allowed
-- ONLY return valid JSON array
-
-Format:
-[
-  {{"query": "...", "intent": "..."}}
+PRODUCTS = [
+    "Bluetooth speaker", "wireless headphones", "laptop charger",
+    "smartphone case", "USB cable", "monitor", "keyboard", "mouse",
+    "webcam", "microphone"
 ]
-"""
+
+PROBLEMS = [
+    "broken", "not working", "defective", "missing parts",
+    "wrong item", "poor quality", "scratched", "damaged"
+]
+
+TIME_MARKERS = [
+    "yesterday", "2 days ago", "last week", "just now", "today"
+]
 
 
-# ----------------------------
-# HF CALL
-# ----------------------------
+# -----------------------------------------------------------------------------
+# PERSONAS
+# -----------------------------------------------------------------------------
 
-def call_hf(prompt: str):
-    payload = {
-        "inputs": prompt,
-        "parameters": {
-            "temperature": 1.0,
-            "max_new_tokens": 800,
-            "return_full_text": False
-        }
-    }
-
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
-
-    response.raise_for_status()
-
-    output = response.json()
-
-    # HF sometimes returns list of dicts
-    if isinstance(output, list):
-        output = output[0]["generated_text"]
-
-    return output
+PERSONAS = [
+    "angry",
+    "frustrated",
+    "neutral",
+    "polite",
+    "confused",
+    "impatient"
+]
 
 
-# ----------------------------
-# JSON PARSE
-# ----------------------------
+# -----------------------------------------------------------------------------
+# NOISE GENERATORS
+# -----------------------------------------------------------------------------
 
-def extract_json(text: str):
-    start = text.find("[")
-    end = text.rfind("]") + 1
+TYPOS = {
+    "order": ["oder", "ordr", "order"],
+    "refund": ["refnd", "refund", "reund"],
+    "issue": ["isue", "issue", "issu"],
+    "delivery": ["delivry", "delivery", "dilvery"],
+}
 
-    if start == -1 or end == -1:
-        raise ValueError("Invalid JSON output from model")
-
-    return json.loads(text[start:end])
-
-
-# ----------------------------
-# BATCH GENERATION
-# ----------------------------
-
-def generate_batch(batch_size: int, intents: list[str]) -> pd.DataFrame:
-
-    prompt = build_prompt(batch_size, intents)
-    raw = call_hf(prompt)
-    data = extract_json(raw)
-
-    return pd.DataFrame(data)
+FILLERS = ["pls help", "need support", "urgent", "help asap", "??", "!!!", ""]
 
 
-# ----------------------------
+# -----------------------------------------------------------------------------
+# CORE STYLE FUNCTIONS
+# -----------------------------------------------------------------------------
+
+def build_query(product, problem, persona, time_marker, intent_set):
+    """
+    Generates a realistic query based on persona + intent context.
+    """
+
+    base_mode = random.random()
+
+    # -----------------------------------------------------------------
+    # 1. Structured natural language (most realistic)
+    # -----------------------------------------------------------------
+    if base_mode < 0.5:
+        templates = [
+            f"My {product} is {problem} {time_marker}, can you help?",
+            f"I received a {product} and it is {problem}",
+            f"Why is my {product} {problem}?",
+            f"I want refund for {product} because it is {problem}",
+            f"Need help with my {product} - it is {problem}",
+        ]
+        query = random.choice(templates)
+
+    # -----------------------------------------------------------------
+    # 2. Conversational / chat-like input
+    # -----------------------------------------------------------------
+    elif base_mode < 0.8:
+        fragments = [
+            f"{product} issue",
+            f"problem with order",
+            f"return {product}",
+            f"refund request",
+            f"delivery problem",
+            f"not working {product}",
+        ]
+        query = random.choice(fragments)
+
+    # -----------------------------------------------------------------
+    # 3. Minimal / search-style queries
+    # -----------------------------------------------------------------
+    else:
+        query = random.choice([
+            product,
+            f"{product} {problem}",
+            "order issue",
+            "refund help",
+            "delivery issue",
+        ])
+
+    # -----------------------------------------------------------------
+    # Persona modulation
+    # -----------------------------------------------------------------
+    if persona == "angry":
+        query = query.upper()
+        query += random.choice(["!!!", "??", " WTF", ""])
+    elif persona == "frustrated":
+        query += random.choice([" pls help", " urgent", " need support"])
+    elif persona == "confused":
+        query = "not sure but " + query
+    elif persona == "polite":
+        query = "hello, " + query
+
+    # -----------------------------------------------------------------
+    # Noise injection (real-world imperfections)
+    # -----------------------------------------------------------------
+    if random.random() < 0.25:
+        query += " " + random.choice(FILLERS)
+
+    # -----------------------------------------------------------------
+    # Typo injection (light realism)
+    # -----------------------------------------------------------------
+    if random.random() < 0.15:
+        word = random.choice(list(TYPOS.keys()))
+        typo = random.choice(TYPOS[word])
+        query = query.replace(word, typo)
+
+    return query.strip()
+
+
+# -----------------------------------------------------------------------------
+# MULTI-INTENT MIXER
+# -----------------------------------------------------------------------------
+
+def sample_intents():
+    """
+    80% single intent, 20% multi-intent (real support tickets)
+    """
+    if random.random() < 0.8:
+        return [random.choice(ALL_INTENTS)]
+    else:
+        return random.sample(ALL_INTENTS, k=2)
+
+
+# -----------------------------------------------------------------------------
 # MAIN GENERATOR
-# ----------------------------
+# -----------------------------------------------------------------------------
 
-def generate_queries(total_queries: int = 500, batch_size: int = 100):
+def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.DataFrame:
+    """
+    Fully synthetic customer query generator with:
+    - persona simulation
+    - multi-intent support
+    - time sensitivity
+    - noise + typo injection
+    - no templates
+    """
+    random.seed(seed)
 
-    dfs = []
-    remaining = total_queries
-    batch_id = 0
+    rows = []
 
-    while remaining > 0:
+    for _ in range(total_queries):
 
-        current = min(batch_size, remaining)
+        intents = sample_intents()
 
-        intents = INTENT_GROUPS[batch_id % len(INTENT_GROUPS)]
+        product = random.choice(PRODUCTS)
+        problem = random.choice(PROBLEMS)
+        persona = random.choice(PERSONAS)
+        time_marker = random.choice(TIME_MARKERS)
 
-        print(f"Generating batch {batch_id + 1} ({current} queries)")
+        query = build_query(product, problem, persona, time_marker, intents)
 
-        df = generate_batch(current, intents)
-        df["batch_id"] = batch_id + 1
+        rows.append({
+            "query": query,
+            "intent": intents[0],   # primary intent (can extend later)
+            "batch_id": 1
+        })
 
-        dfs.append(df)
+    df = pd.DataFrame(rows)
 
-        remaining -= current
-        batch_id += 1
+    # light cleanup
+    df = df.drop_duplicates(subset=["query"]).reset_index(drop=True)
 
-    final_df = (
-        pd.concat(dfs, ignore_index=True)
-        .drop_duplicates(subset=["query"])
-        .reset_index(drop=True)
-    )
-
-    return final_df
+    return df
 
 
-# ----------------------------
-# SAVE
-# ----------------------------
 
-def save_queries(df: pd.DataFrame) -> Path:
 
-    SYNTHETIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+def save_synthetic_queries(df: pd.DataFrame, filename: str = None) -> Path:
+    """
+    Save synthetic queries DataFrame to:
+    <project_root>/data/synthetic/
 
-    output_path = SYNTHETIC_DATA_DIR / (
-        f"synthetic_queries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-    )
+    Project root is resolved as 2 levels above current file directory.
 
+    Args:
+        df: pandas DataFrame to save
+        filename: optional custom filename
+
+    Returns:
+        Path to saved CSV file
+    """
+
+    # 2 levels above current file
+    project_root = Path(__file__).resolve().parents[2]
+
+    # target directory: /data/synthetic
+    save_dir = project_root / "data" / "synthetic"
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # filename handling
+    if filename is None:
+        filename = f"synthetic_queries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    output_path = save_dir / filename
+
+    # save file
     df.to_csv(output_path, index=False)
 
     return output_path
+
+# -----------------------------------------------------------------------------
+# TEST
+# -----------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    df = generate_synthetic_queries(20)
+    print(df.to_string(index=False))
