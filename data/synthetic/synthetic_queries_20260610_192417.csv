@@ -1,0 +1,179 @@
+query,intent,batch_id
+not working USB cable need support,product_search,1
+not sure but not working smartphone case,order_tracking,1
+I received a Bluetooth speaker and it is defective,complaints,1
+not sure but refund help,product_recommendation,1
+not sure but USB cable issue,warranty_replacement,1
+return wireless headphones urgent,delivery_issues,1
+not sure but I want refund for wireless headphones because it is defective,account_issues,1
+refund help urgent ??,order_tracking,1
+I received a mouse and it is scratched ??,account_issues,1
+microphone scratched,returns,1
+"hello, refund request",product_comparison,1
+I want refund for wireless headphones because it is wrong item pls help,product_search,1
+delivery issue,order_modification,1
+"not sure but My webcam is broken last week, can you help?",warranty_replacement,1
+not sure but I want refund for Bluetooth speaker because it is missing parts,order_modification,1
+not sure but Need help with my laptop charger - it is damaged,product_comparison,1
+"hello, Need help with my smartphone case - it is wrong item",discounts_offers,1
+"not sure but My microphone is missing parts 2 days ago, can you help? pls help",product_search,1
+Need help with my USB cable - it is damaged need support,order_tracking,1
+"My wireless headphones is scratched just now, can you help?",order_tracking,1
+I want refund for monitor because it is not working pls help,returns,1
+MOUSE?? help asap,product_recommendation,1
+"hello, refund help",product_search,1
+"My webcam is damaged 2 days ago, can you help? need support",complaints,1
+I RECEIVED A WEBCAM AND IT IS DEFECTIVE!!!,refunds,1
+"not sure but My microphone is missing parts today, can you help?",product_recommendation,1
+Why is my smartphone case poor quality? urgent,order_modification,1
+WHY IS MY MICROPHONE NOT WORKING???,refunds,1
+not sure but not working laptop charger,order_cancellation,1
+delivery issue urgent,account_issues,1
+I want refund for USB cable because it is damaged,order_tracking,1
+not sure but laptop charger issue !!!,order_modification,1
+"hello, Why is my monitor defective?",delivery_issues,1
+refund help,order_cancellation,1
+RETURN LAPTOP CHARGER,order_tracking,1
+I WANT REFUND FOR WIRELESS HEADPHONES BECAUSE IT IS SCRATCHED WTF,order_modification,1
+order issue,product_search,1
+ORDER ISSUE??,delivery_issues,1
+Need help with my keyboard - it is poor quality ??,payment_issues,1
+Why is my Bluetooth speaker missing parts?,returns,1
+Why is my webcam wrong item?,order_modification,1
+"hello, order issue",returns,1
+"hello, delivery problem",account_issues,1
+not sure but I received a wireless headphones and it is wrong item,product_comparison,1
+"hello, Bluetooth speaker",product_search,1
+"hello, My keyboard is damaged 2 days ago, can you help?",discounts_offers,1
+Need help with my smartphone case - it is defective,complaints,1
+"hello, delivery issue",warranty_replacement,1
+Why is my mouse not working?,order_modification,1
+I want refund for keyboard because it is defective,order_tracking,1
+not sure but delivery issue,delivery_issues,1
+"hello, I want refund for keyboard because it is missing parts urgent",delivery_issues,1
+refund request need support,discounts_offers,1
+Why is my USB cable scratched?,product_comparison,1
+NEED HELP WITH MY KEYBOARD - IT IS WRONG ITEM!!!,delivery_issues,1
+delivery issue pls help help asap,complaints,1
+not working mouse,order_tracking,1
+refund request,order_modification,1
+Why is my monitor scratched? help asap,product_search,1
+"hello, not working mouse",order_cancellation,1
+I received a mouse and it is scratched,refunds,1
+Why is my microphone scratched? need support,payment_issues,1
+not sure but problem with order !!!,order_modification,1
+"hello, I received a mouse and it is damaged",order_tracking,1
+"hello, I want refund for mouse because it is poor quality",order_cancellation,1
+monitor not working !!!,order_tracking,1
+WHY IS MY WEBCAM WRONG ITEM???,complaints,1
+refund request pls help,product_search,1
+REFUND HELP!!!,refunds,1
+Bluetooth speaker pls help,account_issues,1
+"hello, Need help with my smartphone case - it is scratched",payment_issues,1
+"My wireless headphones is missing parts 2 days ago, can you help? need support",payment_issues,1
+Why is my mouse damaged?,returns,1
+"hello, not working microphone urgent",order_modification,1
+"hello, Why is my USB cable wrong item?",product_comparison,1
+not sure but order issue,refunds,1
+not sure but problem with order,payment_issues,1
+WHY IS MY KEYBOARD DAMAGED? WTF,product_comparison,1
+delivery issue pls help,discounts_offers,1
+"My keyboard is broken today, can you help? urgent",complaints,1
+"My microphone is missing parts 2 days ago, can you help?",account_issues,1
+not sure but I want refund for mouse because it is wrong item,account_issues,1
+REFUND REQUEST WTF,returns,1
+return USB cable urgent,order_modification,1
+not sure but I want refund for smartphone case because it is missing parts !!!,order_cancellation,1
+DELIVERY PROBLEM WTF,returns,1
+I received a mouse and it is broken,warranty_replacement,1
+Why is my keyboard not working?,discounts_offers,1
+Bluetooth speaker urgent,warranty_replacement,1
+mouse,product_recommendation,1
+"not sure but My webcam is scratched 2 days ago, can you help?",order_tracking,1
+refund request urgent,refunds,1
+DELIVERY ISSUE WTF,order_modification,1
+"hello, I want refund for USB cable because it is missing parts",delivery_issues,1
+KEYBOARD,order_modification,1
+not working microphone need support,order_tracking,1
+"hello, not working Bluetooth speaker urgent",product_recommendation,1
+not sure but laptop charger poor quality,order_tracking,1
+USB CABLE POOR QUALITY??,complaints,1
+NEED HELP WITH MY WEBCAM - IT IS POOR QUALITY!!!,delivery_issues,1
+NEED HELP WITH MY KEYBOARD - IT IS POOR QUALITY WTF,payment_issues,1
+"My mouse is wrong item just now, can you help?",delivery_issues,1
+"hello, Need help with my smartphone case - it is defective",product_recommendation,1
+not sure but order issue urgent,returns,1
+not working monitor,order_tracking,1
+delivery problem,product_recommendation,1
+not sure but problem with ordr,complaints,1
+webcam issue pls help,product_comparison,1
+DELIVERY PROBLEM!!!,product_search,1
+"hello, Need help with my microphone - it is not working",warranty_replacement,1
+NEED HELP WITH MY MONITOR - IT IS DEFECTIVE WTF,product_recommendation,1
+DELIVERY ISSUE??,warranty_replacement,1
+"hello, Why is my mouse scratched?",delivery_issues,1
+WHY IS MY WIRELESS HEADPHONES NOT WORKING???,refunds,1
+wireless headphones,order_cancellation,1
+"My webcam is missing parts just now, can you help? urgent",payment_issues,1
+Need help with my keyboard - it is not working pls help,account_issues,1
+NEED HELP WITH MY MONITOR - IT IS NOT WORKING!!!,order_modification,1
+"hello, Need help with my microphone - it is damaged help asap",refunds,1
+not sure but Why is my smartphone case scratched?,product_search,1
+PROBLEM WITH ORDER??,order_modification,1
+"hello, I want refund for monitor because it is not working",delivery_issues,1
+Why is my keyboard scratched? ??,payment_issues,1
+I WANT REFUND FOR WIRELESS HEADPHONES BECAUSE IT IS SCRATCHED!!!,order_cancellation,1
+I RECEIVED A LAPTOP CHARGER AND IT IS MISSING PARTS??,delivery_issues,1
+not sure but Need help with my mouse - it is damaged,complaints,1
+"hello, Why is my USB cable damaged?",product_recommendation,1
+"hello, not working webcam",payment_issues,1
+delivery issue need support,warranty_replacement,1
+"My monitor is broken last week, can you help?",returns,1
+problem with order,delivery_issues,1
+not sure but I want refund for keyboard because it is defective,account_issues,1
+webcam issue,discounts_offers,1
+Why is my mouse missing parts? pls help,complaints,1
+"hello, problem with order",product_comparison,1
+not sure but I want refund for mouse because it is missing parts,complaints,1
+"hello, mouse defective",order_modification,1
+order issue pls help pls help,returns,1
+REFUND HELP??,complaints,1
+not working Bluetooth speaker need support,product_recommendation,1
+"My smartphone case is scratched today, can you help?",product_search,1
+"My webcam is missing parts 2 days ago, can you help?",account_issues,1
+"My USB cable is broken yesterday, can you help?",order_cancellation,1
+I RECEIVED A WIRELESS HEADPHONES AND IT IS DAMAGED!!!,product_comparison,1
+I WANT REFUND FOR MONITOR BECAUSE IT IS WRONG ITEM,account_issues,1
+not sure but refund help ??,refunds,1
+RETURN MONITOR,order_modification,1
+not sure but keyboard poor quality,product_recommendation,1
+Need help with my wireless headphones - it is missing parts need support,product_comparison,1
+not sure but Why is my wireless headphones defective? pls help,order_cancellation,1
+Need help with my wireless headphones - it is wrong item,warranty_replacement,1
+not sure but Why is my monitor not working?,order_cancellation,1
+PROBLEM WITH ORDER ??,account_issues,1
+I WANT REFUND FOR LAPTOP CHARGER BECAUSE IT IS NOT WORKING,warranty_replacement,1
+"hello, Need help with my wireless headphones - it is damaged",order_cancellation,1
+not sure but I received a Bluetooth speaker and it is not working,returns,1
+not sure but Need help with my webcam - it is defective,product_recommendation,1
+I RECEIVED A BLUETOOTH SPEAKER AND IT IS NOT WORKING,payment_issues,1
+return laptop charger,payment_issues,1
+I RECEIVED A SMARTPHONE CASE AND IT IS DAMAGED!!! help asap,order_cancellation,1
+not sure but I received a laptop charger and it is poor quality,delivery_issues,1
+not sure but refund help urgent,delivery_issues,1
+RETURN BLUETOOTH SPEAKER WTF ??,order_cancellation,1
+Why is my microphone not working? need support,delivery_issues,1
+WHY IS MY KEYBOARD BROKEN?,warranty_replacement,1
+not sure but delivery problem,order_cancellation,1
+not working microphone help asap,account_issues,1
+"My keyboard is defective 2 days ago, can you help? help asap",payment_issues,1
+not sure but smartphone case,discounts_offers,1
+Need help with my mouse - it is scratched,account_issues,1
+Why is my USB cable damaged? pls help,discounts_offers,1
+Why is my smartphone case damaged?,discounts_offers,1
+"My monitor is defective yesterday, can you help?",returns,1
+not sure but order issue ??,refunds,1
+I want refund for webcam because it is missing parts,product_search,1
+"hello, I received a Bluetooth speaker and it is defective",product_comparison,1
+not sure but wireless headphones missing parts,product_search,1
+I received a mouse and it is damaged pls help,order_cancellation,1
