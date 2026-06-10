@@ -1,295 +1,174 @@
 """
-Synthetic E-Commerce Query Generation
+Synthetic E-Commerce Query Generator (Hugging Face API)
 
-Generates diverse customer queries across key e-commerce intents using
-an Instruction Fine-Tuned LLM. Supports batched generation, intent labeling, deduplication,
-reproducibility, and timestamped dataset export.
-
-Output:
-    - query
-    - intent
-
-Saved to:
-    data/synthetic/
+- IFT LLM prompting for realistic query generation
+- Uses HF Inference API
+- Batched synthetic query generation
+- Intent-aware prompting
+- Deduplication + CSV export
 """
 
 from pathlib import Path
 from datetime import datetime
-import json
-import random
-
 import pandas as pd
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+import json
+import os
+import requests
 
+
+# ----------------------------
+# CONFIG
+# ----------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SYNTHETIC_DATA_DIR = PROJECT_ROOT / "data" / "synthetic"
 
-MODEL_NAME = "Qwen/Qwen2.5-7B-Instruct"
-SEED = 42
+HF_TOKEN = os.getenv("HF_TOKEN")  # safest approach
 
-random.seed(SEED)
-torch.manual_seed(SEED)
+API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.3"
+
+HEADERS = {
+    "Authorization": f"Bearer {HF_TOKEN}"
+}
+
 
 INTENT_GROUPS = [
-    [
-        "product_search",
-        "product_recommendation",
-        "product_comparison",
-        "stock_availability",
-    ],
-    [
-        "order_tracking",
-        "order_modification",
-        "order_cancellation",
-        "shipping_questions",
-    ],
-    [
-        "returns",
-        "refunds",
-        "warranty_replacement",
-    ],
-    [
-        "payment_issues",
-        "account_issues",
-        "discounts_offers",
-    ],
-    [
-        "complaints",
-        "delivery_issues",
-    ],
+    ["product_search", "product_recommendation", "product_comparison"],
+    ["order_tracking", "order_modification", "order_cancellation"],
+    ["returns", "refunds", "warranty_replacement"],
+    ["payment_issues", "account_issues", "discounts_offers"],
+    ["complaints", "delivery_issues"],
 ]
 
 
-def load_model(model_name: str = MODEL_NAME):
-    """Load tokenizer and LLM."""
+# ----------------------------
+# PROMPT
+# ----------------------------
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        torch_dtype="auto",
-        device_map="auto",
-    )
-
-    return tokenizer, model
-
-
-def build_prompt(
-    batch_size: int,
-    intents: list[str],
-) -> str:
-    """Build intent-focused generation prompt."""
-
-    intent_text = "\n".join(
-        f"- {intent}" for intent in intents
-    )
+def build_prompt(batch_size: int, intents: list[str]) -> str:
+    intent_text = "\n".join([f"- {i}" for i in intents])
 
     return f"""
-Generate exactly {batch_size} unique customer queries for an e-commerce chatbot.
+Generate {batch_size} realistic e-commerce customer support queries.
 
-Target intents:
+Cover these intents:
 {intent_text}
 
-Requirements:
-- Natural customer language
-- Short, medium, and long queries
-- Questions, requests, complaints, and follow-ups
-- Polite, neutral, and frustrated tones
-- Occasional typos and informal wording
-- Vague and incomplete requests
-- High diversity with minimal repetition
-- Realistic shopping and support scenarios
+Rules:
+- natural human language
+- mix short/long queries
+- include typos, frustration, polite tone
+- ambiguous and incomplete queries allowed
+- ONLY return valid JSON array
 
-Return ONLY valid JSON:
-
+Format:
 [
-  {{
-    "query": "Where is my order?",
-    "intent": "order_tracking"
-  }}
+  {{"query": "...", "intent": "..."}}
 ]
 """
 
 
-def extract_json(response: str):
-    """Extract JSON payload from model output."""
+# ----------------------------
+# HF CALL
+# ----------------------------
 
-    start = response.find("[")
-    end = response.rfind("]") + 1
-
-    if start == -1 or end <= 0:
-        raise ValueError(
-            "Failed to extract JSON from model output."
-        )
-
-    return json.loads(response[start:end])
-
-
-def generate_batch(
-    tokenizer,
-    model,
-    batch_size: int,
-    intents: list[str],
-) -> pd.DataFrame:
-    """Generate one batch of synthetic queries."""
-
-    prompt = build_prompt(
-        batch_size=batch_size,
-        intents=intents,
-    )
-
-    messages = [
-        {
-            "role": "user",
-            "content": prompt,
+def call_hf(prompt: str):
+    payload = {
+        "inputs": prompt,
+        "parameters": {
+            "temperature": 1.0,
+            "max_new_tokens": 800,
+            "return_full_text": False
         }
-    ]
+    }
 
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-    )
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
 
-    inputs = tokenizer(
-        text,
-        return_tensors="pt",
-    ).to(model.device)
+    response.raise_for_status()
 
-    temperature = random.uniform(0.9, 1.3)
+    output = response.json()
 
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=3000,
-        temperature=temperature,
-        top_p=0.95,
-        do_sample=True,
-        repetition_penalty=1.1,
-    )
+    # HF sometimes returns list of dicts
+    if isinstance(output, list):
+        output = output[0]["generated_text"]
 
-    response = tokenizer.decode(
-        outputs[0][inputs["input_ids"].shape[1]:],
-        skip_special_tokens=True,
-    )
+    return output
 
-    data = extract_json(response)
+
+# ----------------------------
+# JSON PARSE
+# ----------------------------
+
+def extract_json(text: str):
+    start = text.find("[")
+    end = text.rfind("]") + 1
+
+    if start == -1 or end == -1:
+        raise ValueError("Invalid JSON output from model")
+
+    return json.loads(text[start:end])
+
+
+# ----------------------------
+# BATCH GENERATION
+# ----------------------------
+
+def generate_batch(batch_size: int, intents: list[str]) -> pd.DataFrame:
+
+    prompt = build_prompt(batch_size, intents)
+    raw = call_hf(prompt)
+    data = extract_json(raw)
 
     return pd.DataFrame(data)
 
 
-def generate_queries(
-    tokenizer,
-    model,
-    total_queries: int = 500,
-    batch_size: int = 100,
-) -> pd.DataFrame:
-    """Generate and combine all batches."""
+# ----------------------------
+# MAIN GENERATOR
+# ----------------------------
+
+def generate_queries(total_queries: int = 500, batch_size: int = 100):
 
     dfs = []
-
     remaining = total_queries
-    batch_idx = 0
+    batch_id = 0
 
     while remaining > 0:
 
-        current_batch_size = min(
-            batch_size,
-            remaining,
-        )
+        current = min(batch_size, remaining)
 
-        intents = INTENT_GROUPS[
-            batch_idx % len(INTENT_GROUPS)
-        ]
+        intents = INTENT_GROUPS[batch_id % len(INTENT_GROUPS)]
 
-        print(
-            f"Generating batch "
-            f"{batch_idx + 1} "
-            f"({current_batch_size} queries)"
-        )
+        print(f"Generating batch {batch_id + 1} ({current} queries)")
 
-        batch_df = generate_batch(
-            tokenizer=tokenizer,
-            model=model,
-            batch_size=current_batch_size,
-            intents=intents,
-        )
+        df = generate_batch(current, intents)
+        df["batch_id"] = batch_id + 1
 
-        batch_df["batch_id"] = batch_idx + 1
+        dfs.append(df)
 
-        dfs.append(batch_df)
+        remaining -= current
+        batch_id += 1
 
-        remaining -= current_batch_size
-        batch_idx += 1
-
-    df = (
+    final_df = (
         pd.concat(dfs, ignore_index=True)
         .drop_duplicates(subset=["query"])
         .reset_index(drop=True)
     )
 
-    required_cols = {
-        "query",
-        "intent",
-    }
-
-    if not required_cols.issubset(df.columns):
-        raise ValueError(
-            f"Expected columns {required_cols}, "
-            f"found {set(df.columns)}"
-        )
-
-    return df
+    return final_df
 
 
-def save_queries(
-    df: pd.DataFrame,
-) -> Path:
-    """Save dataset to synthetic data directory."""
+# ----------------------------
+# SAVE
+# ----------------------------
 
-    SYNTHETIC_DATA_DIR.mkdir(
-        parents=True,
-        exist_ok=True,
+def save_queries(df: pd.DataFrame) -> Path:
+
+    SYNTHETIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    output_path = SYNTHETIC_DATA_DIR / (
+        f"synthetic_queries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     )
 
-    timestamp = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
-    )
-
-    output_path = (
-        SYNTHETIC_DATA_DIR
-        / f"synthetic_ecommerce_queries_{timestamp}.csv"
-    )
-
-    df.to_csv(
-        output_path,
-        index=False,
-    )
+    df.to_csv(output_path, index=False)
 
     return output_path
-
-
-def main():
-
-    tokenizer, model = load_model()
-
-    df = generate_queries(
-        tokenizer=tokenizer,
-        model=model,
-        total_queries=500,
-        batch_size=100,
-    )
-
-    output_path = save_queries(df)
-
-    print(
-        f"\nGenerated {len(df)} unique queries"
-    )
-    print(
-        f"Saved to: {output_path}"
-    )
-
-
-if __name__ == "__main__":
-    main()
