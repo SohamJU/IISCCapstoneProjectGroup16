@@ -16,6 +16,6 @@ AMAZON_PROCESSED_DATA_FILENAME = "ratings_electronics_processed.csv"
 AMAZON_PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
 
 # PostgreSQL database (Aiven)
-POSTGRESQL_AIVEN_KEY = os.getenv("POSTGRESQL_AIVEN_KEY")
-POSTGRESQL_CONNECTION_STRING = f"postgresql://avnadmin:{POSTGRESQL_AIVEN_KEY}@pg-20bad560-myproject123-456.e.aivencloud.com:12548/defaultdb?sslmode=require"
+POSTGRESQL_AIVEN_PASSWORD = os.getenv("POSTGRESQL_AIVEN_PASSWORD")
+POSTGRESQL_CONNECTION_STRING = f"postgresql://avnadmin:{POSTGRESQL_AIVEN_PASSWORD}@pg-20bad560-myproject123-456.e.aivencloud.com:12548/defaultdb?sslmode=require"
 POSTGRESQL_TABLE_NAME = "ratings_electronics"
