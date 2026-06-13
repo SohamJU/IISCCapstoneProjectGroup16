@@ -160,7 +160,6 @@ vector_db/
 
 .DS_Store
 # Environments
-.env
 .envrc
 .venv
 env/

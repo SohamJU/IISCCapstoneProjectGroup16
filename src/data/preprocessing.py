@@ -1,13 +1,7 @@
 """Data preprocessing utilities."""
 
-from pathlib import Path
 import pandas as pd
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
-PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
+from src.config.data import AMAZON_PROCESSED_DATA_DIR, AMAZON_PROCESSED_DATA_FILENAME
 
 
 def preprocess_ratings(
@@ -15,8 +9,7 @@ def preprocess_ratings(
     min_user_interactions: int = 5,
     min_product_interactions: int = 5
 ) -> pd.DataFrame:
-    """s
-    Preprocess Amazon Electronics ratings dataset.
+    """Preprocess Amazon Electronics ratings dataset.
 
     Steps:
     1. Remove duplicates
@@ -81,19 +74,18 @@ def preprocess_ratings(
 
 
 def save_processed_data(
-    df: pd.DataFrame,
-    filename: str = "ratings_electronics_processed.csv"
+    df: pd.DataFrame
 ):
     """
     Save processed dataframe.
     """
 
-    PROCESSED_DATA_DIR.mkdir(
+    AMAZON_PROCESSED_DATA_DIR.mkdir(
         parents=True,
         exist_ok=True
     )
 
-    output_path = PROCESSED_DATA_DIR / filename
+    output_path = AMAZON_PROCESSED_DATA_DIR / AMAZON_PROCESSED_DATA_FILENAME
 
     df.to_csv(
         output_path,

@@ -1,13 +1,7 @@
 """Dataset loading utilities."""
 
-from pathlib import Path
 import pandas as pd
-
-# Project root
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-# Data directories
-RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+from src.config.data import AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
 def load_electronics_reviews():
@@ -19,7 +13,7 @@ def load_electronics_reviews():
     pd.DataFrame
         Electronics ratings dataframe
     """
-    file_path = RAW_DATA_DIR / "ratings_Electronics.csv"
+    file_path = AMAZON_RAW_DATA_DIR / AMAZON_RAW_DATA_FILENAME
 
     df = pd.read_csv(
         file_path,
