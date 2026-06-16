@@ -35,5 +35,14 @@ This repository is organized into:
 - app: optional user interface
 - notebooks: experimentation and demos
 
+## Preprocessing
+
+The repository now includes a preprocessing workflow for:
+- structured Amazon ratings data
+- Twitter customer support conversations
+- product catalog text documents
+
+See [PREPROCESSING.md](PREPROCESSING.md) for setup, outputs, and run commands.
+
 ## Status
 Project scaffold created. Implementation pending.
