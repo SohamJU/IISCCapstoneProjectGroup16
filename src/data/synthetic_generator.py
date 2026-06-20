@@ -3,6 +3,8 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
+
+
 """
 Synthetic Customer Query Generator
 
@@ -11,30 +13,36 @@ Generates realistic e-commerce customer support queries using:
 - Persona-based behavior simulation (angry, polite, confused, etc.)
 - Dynamic language construction (no templates)
 - Noise injection (typos, fillers, urgency signals)
-- Real-world query styles (structured, conversational, fragment-based)
+- Real-world query styles (structured, conversational, multi-line, fragment-based)
 
 Returns a pandas DataFrame with synthetic queries and primary intent labels.
 """
 
 # -----------------------------------------------------------------------------
-# INTENTS
+# INTENTS & INTENT-SPECIFIC VOCABULARY
 # -----------------------------------------------------------------------------
+INTENT_VOCAB = {
+    "product_search": ["looking for", "find a", "searching for", "do you carry"],
+    "product_recommendation": ["suggest a good", "recommendation for", "best option for"],
+    "product_comparison": ["vs", "difference between", "better choice compared to"],
+    "order_tracking": ["where is my", "track status of", "has it shipped yet"],
+    "order_modification": ["change shipping address", "update items in", "modify my order"],
+    "order_cancellation": ["cancel my order", "stop shipment", "don't want this anymore"],
+    "returns": ["return this", "send back", "return policy for"],
+    "refunds": ["get money back", "request a refund", "reimburse me for"],
+    "warranty_replacement": ["warranty claim", "replace broken item", "swap under warranty"],
+    "payment_issues": ["card declined", "charged twice", "payment failed at checkout"],
+    "account_issues": ["cannot login", "reset password", "account locked"],
+    "discounts_offers": ["promo code not working", "apply coupon", "any active discounts"],
+    "complaints": ["terrible service", "very disappointed", "unacceptable quality"],
+    "delivery_issues": ["package stolen", "delivered to wrong house", "delayed shipment"]
+}
 
-INTENT_GROUPS = [
-    ["product_search", "product_recommendation", "product_comparison"],
-    ["order_tracking", "order_modification", "order_cancellation"],
-    ["returns", "refunds", "warranty_replacement"],
-    ["payment_issues", "account_issues", "discounts_offers"],
-    ["complaints", "delivery_issues"],
-]
-
-ALL_INTENTS = [i for group in INTENT_GROUPS for i in group]
-
+ALL_INTENTS = list(INTENT_VOCAB.keys())
 
 # -----------------------------------------------------------------------------
 # DOMAIN VOCAB
 # -----------------------------------------------------------------------------
-
 PRODUCTS = [
     "Bluetooth speaker", "wireless headphones", "laptop charger",
     "smartphone case", "USB cable", "monitor", "keyboard", "mouse",
@@ -50,24 +58,10 @@ TIME_MARKERS = [
     "yesterday", "2 days ago", "last week", "just now", "today"
 ]
 
-
 # -----------------------------------------------------------------------------
-# PERSONAS
+# PERSONAS & NOISE
 # -----------------------------------------------------------------------------
-
-PERSONAS = [
-    "angry",
-    "frustrated",
-    "neutral",
-    "polite",
-    "confused",
-    "impatient"
-]
-
-
-# -----------------------------------------------------------------------------
-# NOISE GENERATORS
-# -----------------------------------------------------------------------------
+PERSONAS = ["angry", "frustrated", "neutral", "polite", "confused", "impatient"]
 
 TYPOS = {
     "order": ["oder", "ordr", "order"],
@@ -78,122 +72,105 @@ TYPOS = {
 
 FILLERS = ["pls help", "need support", "urgent", "help asap", "??", "!!!", ""]
 
+TRANSITIONS = [
+    ". Also, ", ". Another thing, I also need to ", " and ", " as well as ", ". Can you also help me "
+]
 
 # -----------------------------------------------------------------------------
 # CORE STYLE FUNCTIONS
 # -----------------------------------------------------------------------------
-
 def build_query(product, problem, persona, time_marker, intent_set):
     """
-    Generates a realistic query based on persona + intent context.
+    Builds single or multi-sentence queries organically matching intents and personas.
     """
-
-    base_mode = random.random()
-
-    # -----------------------------------------------------------------
-    # 1. Structured natural language (most realistic)
-    # -----------------------------------------------------------------
-    if base_mode < 0.5:
-        templates = [
-            f"My {product} is {problem} {time_marker}, can you help?",
-            f"I received a {product} and it is {problem}",
-            f"Why is my {product} {problem}?",
-            f"I want refund for {product} because it is {problem}",
-            f"Need help with my {product} - it is {problem}",
-        ]
-        query = random.choice(templates)
-
-    # -----------------------------------------------------------------
-    # 2. Conversational / chat-like input
-    # -----------------------------------------------------------------
-    elif base_mode < 0.8:
-        fragments = [
-            f"{product} issue",
-            f"problem with order",
-            f"return {product}",
-            f"refund request",
-            f"delivery problem",
-            f"not working {product}",
-        ]
-        query = random.choice(fragments)
-
-    # -----------------------------------------------------------------
-    # 3. Minimal / search-style queries
-    # -----------------------------------------------------------------
-    else:
-        query = random.choice([
-            product,
-            f"{product} {problem}",
-            "order issue",
-            "refund help",
-            "delivery issue",
-        ])
-
-    # -----------------------------------------------------------------
-    # Persona modulation
-    # -----------------------------------------------------------------
-    if persona == "angry":
-        query = query.upper()
-        query += random.choice(["!!!", "??", " WTF", ""])
-    elif persona == "frustrated":
-        query += random.choice([" pls help", " urgent", " need support"])
+    sentences = []
+    
+    # 1. Greetings & Context Setup
+    if persona == "polite":
+        sentences.append(random.choice(["Hi there!", "Hello, hope you are doing well.", "Good day."]))
     elif persona == "confused":
-        query = "not sure but " + query
-    elif persona == "polite":
-        query = "hello, " + query
+        sentences.append(random.choice(["I am completely lost.", "Not entirely sure how this works.", "Hey, I need some clarity."]))
+    elif persona == "angry":
+        sentences.append(random.choice(["This is unacceptable.", "I am highly annoyed.", "Unbelievable service."]))
 
-    # -----------------------------------------------------------------
-    # Noise injection (real-world imperfections)
-    # -----------------------------------------------------------------
+    # 2. Primary Intent Execution
+    intent_1 = intent_set[0]
+    action_phrase_1 = random.choice(INTENT_VOCAB[intent_1])
+    
+    core_templates = [
+        f"I am {action_phrase_1} the {product}.",
+        f"Regarding the {product} I got {time_marker}, it is {problem} and I need to {action_phrase_1} it.",
+        f"Can you help with my {product}? It's {problem} and I am looking to {action_phrase_1}.",
+        f"My {product} is {problem}. How do I handle {action_phrase_1}?"
+    ]
+    primary_clause = random.choice(core_templates)
+    
+    # 3. Secondary Intent Handling (Multi-Intent Mixing)
+    if len(intent_set) > 1:
+        intent_2 = intent_set[1]
+        action_phrase_2 = random.choice(INTENT_VOCAB[intent_2])
+        transition = random.choice(TRANSITIONS)
+        
+        if transition.startswith("."):
+            sentences.append(primary_clause)
+            sentences.append(f"{transition.strip('. ')} {action_phrase_2} for a different issue.")
+        else:
+            primary_clause = primary_clause.rstrip(".") + f"{transition}{action_phrase_2}."
+            sentences.append(primary_clause)
+    else:
+        sentences.append(primary_clause)
+
+    # 4. Closings & Sign-offs
+    if persona in ["frustrated", "impatient", "angry"]:
+        sentences.append(random.choice(["Please resolve this immediately.", "Let me know ASAP!", "Waiting for your prompt response."]))
+    elif persona == "polite":
+        sentences.append(random.choice(["Thank you for your assistance.", "Appreciate your time!", "Have a great day."]))
+    elif persona == "confused":
+        sentences.append(random.choice(["Can you walk me through this step by step?", "What should my next step be?"]))
+
+    # 5. Persona Structural Shifts
+    if persona == "impatient":
+        # Impatient profiles bypass lines 1 and 3 completely for a snapshot 1-liner
+        query = " ".join(sentences[1:2]) if len(sentences) > 1 else sentences[0]
+    else:
+        joiner = random.choice(["\n", " "])
+        query = joiner.join(sentences)
+
+    if persona == "angry" and random.random() < 0.4:
+        query = query.upper()
+
+    # 6. Noise & Typo Injections
     if random.random() < 0.25:
         query += " " + random.choice(FILLERS)
 
-    # -----------------------------------------------------------------
-    # Typo injection (light realism)
-    # -----------------------------------------------------------------
-    if random.random() < 0.15:
-        word = random.choice(list(TYPOS.keys()))
-        typo = random.choice(TYPOS[word])
-        query = query.replace(word, typo)
+    if random.random() < 0.20:
+        for word, variations in TYPOS.items():
+            if word in query.lower():
+                query = query.replace(word, random.choice(variations))
 
     return query.strip()
-
 
 # -----------------------------------------------------------------------------
 # MULTI-INTENT MIXER
 # -----------------------------------------------------------------------------
-
 def sample_intents():
     """
-    80% single intent, 20% multi-intent (real support tickets)
+    65% single intent, 35% multi-intent (to generate longer multi-line tickets)
     """
-    if random.random() < 0.8:
+    if random.random() < 0.65:
         return [random.choice(ALL_INTENTS)]
     else:
         return random.sample(ALL_INTENTS, k=2)
 
-
 # -----------------------------------------------------------------------------
 # MAIN GENERATOR
 # -----------------------------------------------------------------------------
-
 def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.DataFrame:
-    """
-    Fully synthetic customer query generator with:
-    - persona simulation
-    - multi-intent support
-    - time sensitivity
-    - noise + typo injection
-    - no templates
-    """
     random.seed(seed)
-
     rows = []
 
     for _ in range(total_queries):
-
         intents = sample_intents()
-
         product = random.choice(PRODUCTS)
         problem = random.choice(PROBLEMS)
         persona = random.choice(PERSONAS)
@@ -203,57 +180,53 @@ def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.Da
 
         rows.append({
             "query": query,
-            "intent": intents[0],   # primary intent (can extend later)
+            "intent": intents[0],  # primary intent
+            "all_intents": ", ".join(intents),
+            "persona": persona,
             "batch_id": 1
         })
 
     df = pd.DataFrame(rows)
-
-    # light cleanup
     df = df.drop_duplicates(subset=["query"]).reset_index(drop=True)
-
     return df
 
-
-
-
+# -----------------------------------------------------------------------------
+# SAVE FUNCTION
+# -----------------------------------------------------------------------------
 def save_synthetic_queries(df: pd.DataFrame, filename: str = None) -> Path:
     """
-    Save synthetic queries DataFrame to:
-    <project_root>/data/synthetic/
-
-    Project root is resolved as 2 levels above current file directory.
-
-    Args:
-        df: pandas DataFrame to save
-        filename: optional custom filename
-
-    Returns:
-        Path to saved CSV file
+    Save synthetic queries DataFrame to <project_root>/data/synthetic/
+    Safely handles both scripted executions and interactive environments.
     """
+    try:
+        project_root = Path(__file__).resolve().parents[2]
+    except NameError:
+        # Fallback if executing inside an interactive environment like a notebook
+        project_root = Path.cwd()
 
-    # 2 levels above current file
-    project_root = Path(__file__).resolve().parents[2]
-
-    # target directory: /data/synthetic
     save_dir = project_root / "data" / "synthetic"
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    # filename handling
     if filename is None:
         filename = f"synthetic_queries_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
     output_path = save_dir / filename
-
-    # save file
     df.to_csv(output_path, index=False)
-
     return output_path
 
 # -----------------------------------------------------------------------------
-# TEST
+# RUNNER
 # -----------------------------------------------------------------------------
-
 if __name__ == "__main__":
-    df = generate_synthetic_queries(20)
-    print(df.to_string(index=False))
+    # 1. Generate DataFrame
+    generated_df = generate_synthetic_queries(20)
+    print("--- Sample Generated Data ---")
+    print(generated_df[["query", "intent", "persona"]].head(5).to_string(index=False))
+    print("\n-----------------------------\n")
+    
+    # 2. Save Output
+    try:
+        saved_file = save_synthetic_queries(generated_df)
+        print(f"Success! File saved cleanly to: {saved_file}")
+    except Exception as e:
+        print(f"Could not save file automatically: {e}")
