@@ -1,13 +1,7 @@
 """Dataset loading utilities."""
 
 import pandas as pd
-
-from src.config.data import (
-    AMAZON_RAW_DATA_DIR,
-    AMAZON_RAW_DATA_FILENAME,
-    TWITTER_SUPPORT_DATA_DIR,
-    TWITTER_SUPPORT_DATA_FILENAME,
-)
+from src.config.data import AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
 def load_electronics_reviews():
@@ -28,15 +22,6 @@ def load_electronics_reviews():
     )
 
     return df
-
-
-def load_twitter_support_conversations(file_path=None) -> pd.DataFrame:
-    """Load the Kaggle Twitter customer support dataset."""
-
-    if file_path is None:
-        file_path = TWITTER_SUPPORT_DATA_DIR / TWITTER_SUPPORT_DATA_FILENAME
-
-    return pd.read_csv(file_path)
 
 
 

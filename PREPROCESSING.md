@@ -89,8 +89,9 @@ Columns:
 ## Files Added Or Updated For This Flow
 
 - `src/data/preprocessing.py`
-- `src/data/loaders.py`
-- `src/config/data.py`
+- `src/data/unstructured_loaders.py`
+- `src/data/unstructured_preprocessing.py`
+- `src/config/unstructured_data.py`
 - `src/memory/conversation_memory.py`
 - `src/memory/session_manager.py`
 - `scripts/run_preprocessing.py`
@@ -124,8 +125,8 @@ python3 scripts/run_preprocessing.py --dataset twitter --customer-only
 ## Python Usage
 
 ```python
-from src.data.loaders import load_twitter_support_conversations
-from src.data.preprocessing import (
+from src.data.unstructured_loaders import load_twitter_support_conversations
+from src.data.unstructured_preprocessing import (
     build_conversation_history,
     preprocess_customer_support_conversations,
     save_conversation_history,
