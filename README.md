@@ -44,5 +44,11 @@ The repository now includes a preprocessing workflow for:
 
 See [PREPROCESSING.md](PREPROCESSING.md) for setup, outputs, and run commands.
 
+## Memory
+
+The repository also includes a lightweight runtime memory layer for live chat sessions.
+
+See [MEMORY.md](MEMORY.md) for usage examples, expected output, and how `SessionManager` and `ConversationMemory` fit into downstream chat flows.
+
 ## Status
 Project scaffold created. Implementation pending.
