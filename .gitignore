@@ -151,7 +151,7 @@ activemq-data/
 data/raw/
 
 data/processed/
-data/synthetic/
+#data/synthetic/
 
 # Vector DB
 
