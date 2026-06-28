@@ -1,0 +1,111 @@
+{
+  "file_name": "returns.csv",
+  "num_rows": 2000,
+  "columns": [
+    {
+      "name": "return_id",
+      "type": "str",
+      "description": "Unique identifier for the return request.",
+      "sample_values": [
+        "RET-000001",
+        "RET-000002",
+        "RET-000003"
+      ]
+    },
+    {
+      "name": "order_id",
+      "type": "str",
+      "description": "Unique identifier for the order.",
+      "sample_values": [
+        "ORD-008132",
+        "ORD-004109",
+        "ORD-002035"
+      ]
+    },
+    {
+      "name": "order_item_id",
+      "type": "str",
+      "description": "Unique identifier for the order line item.",
+      "sample_values": [
+        "OI-0012242",
+        "OI-0005986",
+        "OI-0002935"
+      ]
+    },
+    {
+      "name": "product_id",
+      "type": "str",
+      "description": "Unique identifier for the product (ASIN).",
+      "sample_values": [
+        "B000VG2KBU",
+        "B00LQDGTQO",
+        "B07V5Y8375"
+      ]
+    },
+    {
+      "name": "customer_id",
+      "type": "str",
+      "description": "Unique identifier for the customer.",
+      "sample_values": [
+        "AHGZHMQQWETEQTCLMY7W5I7SGIWQ",
+        "AEI5HR4W5RS4LBVYYUFIMZVEXQVA",
+        "AFTY4KKPFHF3KHRFLY7S23NYP7TQ"
+      ]
+    },
+    {
+      "name": "reason",
+      "type": "str",
+      "description": "Reason for the return.",
+      "sample_values": [
+        "Changed my mind",
+        "Changed my mind",
+        "Wrong item received"
+      ],
+      "unique_values": [
+        "Changed my mind",
+        "Wrong item received",
+        "Defective/damaged",
+        "Item not as described",
+        "Better price available",
+        "Missing parts/accessories",
+        "Arrived too late"
+      ]
+    },
+    {
+      "name": "status",
+      "type": "str",
+      "description": "Current status of the order or return (e.g., delivered, pending, approved).",
+      "sample_values": [
+        "pending",
+        "approved",
+        "pending"
+      ],
+      "unique_values": [
+        "pending",
+        "approved",
+        "rejected",
+        "refunded"
+      ]
+    },
+    {
+      "name": "refund_amount",
+      "type": "float64",
+      "description": "Amount refunded for a return.",
+      "sample_values": [
+        48.08,
+        74.46,
+        14.65
+      ]
+    },
+    {
+      "name": "request_date",
+      "type": "str",
+      "description": "Date the return was requested.",
+      "sample_values": [
+        "2026-02-26",
+        "2015-09-13",
+        "2019-11-16"
+      ]
+    }
+  ]
+}

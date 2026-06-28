@@ -1,0 +1,67 @@
+{
+  "file_name": "customer_queries.csv",
+  "num_rows": 444,
+  "columns": [
+    {
+      "name": "query",
+      "type": "str",
+      "description": "The text of the customer query.",
+      "sample_values": [
+        "Regarding the TOPSKY Galaxy Tab 3 Lite Case Kids,Galaxy Tab E Lite Case,[Robot Series] Shock-Absorption High Impact Hybrid Armor Defender Case for Samsung Galaxy Tab 3 Lite 7.0/Tab E Lite, Navy Blue/Lemony Yellow I got just now, it is defective and I need to better choice compared to it. Can you also help me change phone number for a different issue. Waiting for your prompt response.",
+        "Hello, hope you are doing well.\nRegarding the Spigen Tempered Glass Screen Protector Designed for Galaxy Tab A 10.5 inch (2018) [9H Hardness/Case-Friendly] I got today, it is poor quality and I need to return this it.\nAlso, card declined for a different issue.\nAppreciate your time!",
+        "Can you help with my LNDMA LED Cloth Dryer, Portable Dryer for Underwear and Socks, LED Light Cloth Underwear Dryer Box for Home Household? It's broken and I am looking to vs.\nPlease resolve this immediately."
+      ]
+    },
+    {
+      "name": "intent",
+      "type": "str",
+      "description": "Primary intent of the customer query.",
+      "sample_values": [
+        "product_comparison",
+        "returns",
+        "product_comparison"
+      ]
+    },
+    {
+      "name": "all_intents",
+      "type": "str",
+      "description": "List of all intents extracted or matched.",
+      "sample_values": [
+        "product_comparison, account_update",
+        "returns, payment_issues",
+        "product_comparison"
+      ]
+    },
+    {
+      "name": "persona",
+      "type": "str",
+      "description": "Assigned customer persona.",
+      "sample_values": [
+        "frustrated",
+        "polite",
+        "frustrated"
+      ],
+      "unique_values": [
+        "frustrated",
+        "polite",
+        "impatient",
+        "angry",
+        "confused",
+        "neutral"
+      ]
+    },
+    {
+      "name": "batch_id",
+      "type": "int64",
+      "description": "Identifier for the batch processing.",
+      "sample_values": [
+        1,
+        1,
+        1
+      ],
+      "unique_values": [
+        1
+      ]
+    }
+  ]
+}

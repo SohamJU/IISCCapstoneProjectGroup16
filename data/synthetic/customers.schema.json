@@ -1,0 +1,130 @@
+{
+  "file_name": "customers.csv",
+  "num_rows": 2000,
+  "columns": [
+    {
+      "name": "customer_id",
+      "type": "str",
+      "description": "Unique identifier for the customer.",
+      "sample_values": [
+        "AFZUK3MTBIBEDQOPAK3OATUOUKLA",
+        "AHV6QCNBJNSGLATP56JAWJ3C4G2A",
+        "AFJBKPK5W56XWSNPQU2WW66ISWYQ"
+      ]
+    },
+    {
+      "name": "first_name",
+      "type": "str",
+      "description": "Customer's first name.",
+      "sample_values": [
+        "Danielle",
+        "Jesse",
+        "Katherine"
+      ]
+    },
+    {
+      "name": "last_name",
+      "type": "str",
+      "description": "Customer's last name.",
+      "sample_values": [
+        "Johnson",
+        "Guzman",
+        "Moore"
+      ]
+    },
+    {
+      "name": "email",
+      "type": "str",
+      "description": "Customer's email address.",
+      "sample_values": [
+        "john21@example.net",
+        "jennifermiles@example.com",
+        "jpeterson@example.org"
+      ]
+    },
+    {
+      "name": "loyalty_tier",
+      "type": "str",
+      "description": "Customer's loyalty program tier (e.g., Gold, Silver).",
+      "sample_values": [
+        "Silver",
+        "Bronze",
+        "Silver"
+      ],
+      "unique_values": [
+        "Silver",
+        "Bronze",
+        "Gold",
+        "Platinum"
+      ]
+    },
+    {
+      "name": "city",
+      "type": "str",
+      "description": "City of the customer's address.",
+      "sample_values": [
+        "New Roberttown",
+        "South Bridget",
+        "Curtisfurt"
+      ]
+    },
+    {
+      "name": "state",
+      "type": "str",
+      "description": "State or province of the customer's address.",
+      "sample_values": [
+        "CO",
+        "AS",
+        "CT"
+      ]
+    },
+    {
+      "name": "country",
+      "type": "str",
+      "description": "Country of the customer's address.",
+      "sample_values": [
+        "US",
+        "US",
+        "US"
+      ],
+      "unique_values": [
+        "US"
+      ]
+    },
+    {
+      "name": "signup_date",
+      "type": "str",
+      "description": "Date the customer registered.",
+      "sample_values": [
+        "2023-05-07",
+        "2021-07-17",
+        "2024-07-16"
+      ]
+    },
+    {
+      "name": "preferred_categories",
+      "type": "str",
+      "description": "List of categories the customer prefers.",
+      "sample_values": [
+        "All Electronics | Amazon Devices | Amazon Home | Apple Products | Camera & Photo | Cell Phones & Accessories | Computers | Home Audio & Theater | Office Products | Sports & Outdoors",
+        "AMAZON FASHION | All Electronics | Amazon Home | Appliances | Camera & Photo | Cell Phones & Accessories | Computers | Grocery | Home Audio & Theater | Industrial & Scientific | Office Products | Sports & Outdoors | Tools & Home Improvement",
+        "All Electronics | Cell Phones & Accessories | Computers | Home Audio & Theater | Industrial & Scientific | Sports & Outdoors | Tools & Home Improvement"
+      ]
+    },
+    {
+      "name": "language",
+      "type": "str",
+      "description": "Language of the review or query.",
+      "sample_values": [
+        "en",
+        "en",
+        "en"
+      ],
+      "unique_values": [
+        "en",
+        "es",
+        "fr"
+      ]
+    }
+  ]
+}
