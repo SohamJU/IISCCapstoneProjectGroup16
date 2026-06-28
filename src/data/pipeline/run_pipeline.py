@@ -175,6 +175,16 @@ def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
     
     run(force=force, behavior=behavior)
 
+def step_13_test_postgres() -> None:
+    """Step 13: Test PostgreSQL Upload."""
+    print("\n" + "=" * 70)
+    print("STEP 13: Test PostgreSQL Upload")
+    print("=" * 70)
+    from src.data.pipeline.test_postgres import run
+    
+    run()
+
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # INTEGRITY VALIDATION
@@ -440,7 +450,7 @@ def parse_args() -> argparse.Namespace:
         "--step",
         type=int,
         default=None,
-        help="Run only a specific step (1-12). Default: run all.",
+        help="Run only a specific step (1-13). Default: run all.",
     )
     parser.add_argument("--force", action="store_true", help="Force re-run all steps.")
     parser.add_argument(
@@ -493,11 +503,12 @@ def main() -> None:
         10: lambda: step_10_validate(args.force),
         11: lambda: step_11_generate_schemas(args.force),
         12: lambda: step_12_upload_postgres(args.force, args.postgres_behavior),
+        13: lambda: step_13_test_postgres(),
     }
 
     if args.step is not None:
         if args.step not in steps:
-            print(f"❌ Invalid step: {args.step}. Must be 1-12.")
+            print(f"❌ Invalid step: {args.step}. Must be 1-13.")
             sys.exit(1)
         steps[args.step]()
     else:
