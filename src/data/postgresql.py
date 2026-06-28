@@ -1,27 +1,35 @@
 
 import psycopg2
 from sqlalchemy import create_engine
-from src.config.data import POSTGRESQL_CONNECTION_STRING, POSTGRESQL_TABLE_NAME
+from src.config.data import POSTGRESQL_CONNECTION_STRING
 
 
-def upload_dataframe_to_postgresql_db(df, if_exists="fail"):
+def get_db_engine():
+    """
+    Get a SQLAlchemy engine connected to the PostgreSQL database.
+    Useful for Pandas or Agent connections.
+    """
+    return create_engine(POSTGRESQL_CONNECTION_STRING)
+
+
+def upload_dataframe_to_postgresql_db(df, table_name: str, if_exists: str = "replace"):
     """
     Upload a pandas DataFrame to a PostgreSQL database.
 
     Args:
         df: The pandas DataFrame to upload.
+        table_name: The name of the target SQL table.
         if_exists: How to handle existing data in the table. Options are 'fail', 'replace', or 'append'.
     """
     # Create a SQLAlchemy engine using the connection string
-    sql_engine = create_engine(POSTGRESQL_CONNECTION_STRING)
+    sql_engine = get_db_engine()
 
-    # Upload DataFrame to Aiven PostgreSQL
-    # Options for if_exists: 'fail', 'replace', or 'append'
+    # Upload DataFrame to PostgreSQL
     df.to_sql(
-        name=POSTGRESQL_TABLE_NAME,       # Name of the target SQL table
+        name=table_name,            # Name of the target SQL table
         con=sql_engine,             # Database connection engine
-        if_exists=if_exists,    # Drops and recreates the table if it exists
-        index=False             # Prevents pandas index from becoming a column
+        if_exists=if_exists,        # Drops and recreates the table if it exists
+        index=False                 # Prevents pandas index from becoming a column
     )
 
 

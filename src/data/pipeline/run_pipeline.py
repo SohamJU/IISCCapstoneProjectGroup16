@@ -166,6 +166,16 @@ def step_11_generate_schemas(force: bool) -> None:
     run(force=force)
 
 
+def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
+    """Step 12: Upload datasets to PostgreSQL."""
+    print("\n" + "=" * 70)
+    print("STEP 12: Upload to PostgreSQL")
+    print("=" * 70)
+    from src.data.pipeline.upload_postgres import run
+    
+    run(force=force, behavior=behavior)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # INTEGRITY VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
@@ -430,7 +440,7 @@ def parse_args() -> argparse.Namespace:
         "--step",
         type=int,
         default=None,
-        help="Run only a specific step (1-11). Default: run all.",
+        help="Run only a specific step (1-12). Default: run all.",
     )
     parser.add_argument("--force", action="store_true", help="Force re-run all steps.")
     parser.add_argument(
@@ -458,6 +468,12 @@ def parse_args() -> argparse.Namespace:
         default="static",
         help="Policy generation method.",
     )
+    parser.add_argument(
+        "--postgres-behavior",
+        choices=["replace", "append", "skip"],
+        default=None,
+        help="Override config behavior for Postgres upload.",
+    )
     return parser.parse_args()
 
 
@@ -476,11 +492,12 @@ def main() -> None:
         9: lambda: step_09_generate_policies(args.force, args.policy_provider),
         10: lambda: step_10_validate(args.force),
         11: lambda: step_11_generate_schemas(args.force),
+        12: lambda: step_12_upload_postgres(args.force, args.postgres_behavior),
     }
 
     if args.step is not None:
         if args.step not in steps:
-            print(f"❌ Invalid step: {args.step}. Must be 1-11.")
+            print(f"❌ Invalid step: {args.step}. Must be 1-12.")
             sys.exit(1)
         steps[args.step]()
     else:
