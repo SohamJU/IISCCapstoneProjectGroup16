@@ -25,7 +25,7 @@ POSTGRESQL_PORT = os.getenv("POSTGRESQL_PORT", "12548")
 POSTGRESQL_USER = os.getenv("POSTGRESQL_USER", "avnadmin")
 POSTGRESQL_DB = os.getenv("POSTGRESQL_DB", "defaultdb")
 # Upload Behavior (replace, append, skip, fail)
-POSTGRESQL_UPLOAD_BEHAVIOR = "replace"
+POSTGRESQL_UPLOAD_BEHAVIOR = "skip"
 
 # Password remains in .env
 POSTGRESQL_AIVEN_PASSWORD = os.getenv("POSTGRESQL_AIVEN_PASSWORD")
