@@ -156,6 +156,16 @@ def step_10_validate(force: bool) -> None:
     _run_validation()
 
 
+def step_11_generate_schemas(force: bool) -> None:
+    """Step 11: Generate JSON schemas for all datasets."""
+    print("\n" + "=" * 70)
+    print("STEP 11: Generate Schemas")
+    print("=" * 70)
+    from src.data.pipeline.generate_schemas import run
+    
+    run(force=force)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # INTEGRITY VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
@@ -420,7 +430,7 @@ def parse_args() -> argparse.Namespace:
         "--step",
         type=int,
         default=None,
-        help="Run only a specific step (1-10). Default: run all.",
+        help="Run only a specific step (1-11). Default: run all.",
     )
     parser.add_argument("--force", action="store_true", help="Force re-run all steps.")
     parser.add_argument(
@@ -465,11 +475,12 @@ def main() -> None:
         8: lambda: step_08_generate_queries(args.force, args.total_queries),
         9: lambda: step_09_generate_policies(args.force, args.policy_provider),
         10: lambda: step_10_validate(args.force),
+        11: lambda: step_11_generate_schemas(args.force),
     }
 
     if args.step is not None:
         if args.step not in steps:
-            print(f"❌ Invalid step: {args.step}. Must be 1-10.")
+            print(f"❌ Invalid step: {args.step}. Must be 1-11.")
             sys.exit(1)
         steps[args.step]()
     else:
