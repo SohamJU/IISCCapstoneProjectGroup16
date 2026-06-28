@@ -44,6 +44,18 @@ The repository now includes a preprocessing workflow for:
 
 See [PREPROCESSING.md](PREPROCESSING.md) for setup, outputs, and run commands.
 
+## Synthetic Data Pipeline
+
+To build a robust, perfectly-relational database for agent testing, the project includes a massive 13-step synthetic data generation pipeline (`notebooks/02_run_synthetic_data_pipeline.py`).
+
+This pipeline handles:
+1. **Downloading** real Amazon 2023 product and review data.
+2. **Generating** thousands of highly realistic synthetic customers, relational orders, and product returns using Faker and logic constraints.
+3. **Validating** data integrity (foreign keys, logic checks).
+4. **Publishing** all tables directly to our shared Aiven Cloud PostgreSQL database.
+
+For a full breakdown of the architecture, CLI commands, and environment variables, see [docs/01_data_pipeline.md](docs/01_data_pipeline.md).
+
 ## Memory
 
 The repository also includes a lightweight runtime memory layer for live chat sessions.
