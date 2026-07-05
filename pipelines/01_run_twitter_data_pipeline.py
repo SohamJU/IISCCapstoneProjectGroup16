@@ -9,6 +9,6 @@ if str(PROJECT_ROOT) not in sys.path:
 if __name__ == "__main__":
     script_path = PROJECT_ROOT / "src" / "data" / "twitter_data_pipeline" / "run_twitter_preprocessing.py"
     subprocess.run(
-        [sys.executable, str(script_path), "--dataset", "twitter", "--twitter-path", str(PROJECT_ROOT / "archive" / "twcs" / "twcs.csv")],
+        [sys.executable, str(script_path), "--dataset", "twitter", "--twitter-path", str(PROJECT_ROOT / "archive" /"sample.csv")],
         check=True,
     )

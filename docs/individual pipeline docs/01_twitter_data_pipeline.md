@@ -94,7 +94,7 @@ Columns:
 - `src/config/unstructured_data.py`
 - `src/memory/conversation_memory.py`
 - `src/memory/session_manager.py`
-- `scripts/run_preprocessing.py`
+- `pipelines/run_preprocessing.py`
 
 ## How To Run
 

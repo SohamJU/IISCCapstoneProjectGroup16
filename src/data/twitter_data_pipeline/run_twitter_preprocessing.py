@@ -12,8 +12,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd
 
-from src.data.unstructured_loaders import load_twitter_support_conversations
-from src.data.unstructured_preprocessing import (
+from src.data.twitter_data_pipeline.unstructured_loaders import load_twitter_support_conversations
+from src.data.twitter_data_pipeline.unstructured_preprocessing import (
     build_conversation_history,
     preprocess_customer_support_conversations,
     preprocess_product_catalog,
@@ -74,7 +74,7 @@ def run_ratings_preprocessing() -> None:
     """Preprocess the structured ratings dataset and save the result."""
 
     from src.data.loaders import load_electronics_reviews
-    from src.data.preprocessing import preprocess_ratings, save_processed_data
+    from src.data.twitter_data_pipeline.preprocessing import preprocess_ratings, save_processed_data
 
     ratings_df = load_electronics_reviews()
     processed_ratings = preprocess_ratings(ratings_df)

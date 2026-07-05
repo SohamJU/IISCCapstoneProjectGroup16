@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.data.unstructured_preprocessing import (
+from src.data.twitter_data_pipeline.unstructured_preprocessing import (
     build_conversation_history,
     preprocess_customer_support_conversations,
     preprocess_product_catalog,
