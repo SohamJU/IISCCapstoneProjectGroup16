@@ -36,7 +36,6 @@ jobs:
 
       - name: Run type checking
         run: mypy .
-        continue-on-error: true
 
       - name: Run unit tests
         run: pytest . --cov=src
