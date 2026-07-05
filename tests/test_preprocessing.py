@@ -7,7 +7,7 @@ from src.data.unstructured_preprocessing import (
 )
 
 
-def test_preprocess_customer_support_conversations_builds_threads():
+def test_preprocess_customer_support_conversations_builds_threads() -> None:
     raw_df = pd.DataFrame(
         [
             {
@@ -49,7 +49,7 @@ def test_preprocess_customer_support_conversations_builds_threads():
     assert list(processed_df["conversation_id"]) == ["1", "1", "1"]
 
 
-def test_preprocess_customer_support_conversations_normalizes_float_reply_ids():
+def test_preprocess_customer_support_conversations_normalizes_float_reply_ids() -> None:
     raw_df = pd.DataFrame(
         [
             {
@@ -79,7 +79,7 @@ def test_preprocess_customer_support_conversations_normalizes_float_reply_ids():
     assert list(processed_df["turn_index"]) == [1, 2]
 
 
-def test_build_conversation_history_aggregates_context():
+def test_build_conversation_history_aggregates_context() -> None:
     conversations_df = pd.DataFrame(
         [
             {
@@ -104,11 +104,16 @@ def test_build_conversation_history_aggregates_context():
     history_df = build_conversation_history(conversations_df)
 
     assert history_df.iloc[0]["turn_count"] == 2
-    assert "customer: My headphones stopped working." in history_df.iloc[0]["conversation_text"]
-    assert history_df.iloc[0]["latest_customer_text"] == "My headphones stopped working."
+    assert (
+        "customer: My headphones stopped working."
+        in history_df.iloc[0]["conversation_text"]
+    )
+    assert (
+        history_df.iloc[0]["latest_customer_text"] == "My headphones stopped working."
+    )
 
 
-def test_preprocess_product_catalog_infers_text_fields():
+def test_preprocess_product_catalog_infers_text_fields() -> None:
     raw_products = pd.DataFrame(
         [
             {

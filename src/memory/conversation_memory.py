@@ -11,7 +11,7 @@ class ConversationTurn:
 
     role: str
     text: str
-    metadata: dict | None = None
+    metadata: dict[str, object] | None = None
 
 
 @dataclass
@@ -21,7 +21,9 @@ class ConversationMemory:
     session_id: str
     turns: list[ConversationTurn] = field(default_factory=list)
 
-    def add_turn(self, role: str, text: str, metadata: dict | None = None) -> None:
+    def add_turn(
+        self, role: str, text: str, metadata: dict[str, object] | None = None
+    ) -> None:
         """Append one turn to the session history."""
 
         if not text or not text.strip():
