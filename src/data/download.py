@@ -6,7 +6,7 @@ import pathlib
 from src.config.data import AMAZON_KAGGLE_DATASET, AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
-def download_electronics_reviews(force_download: bool = False):
+def download_electronics_reviews(force_download: bool = False) -> Path:
     """Download Amazon Electronics ratings dataset from Kaggle.
 
     Downloads the dataset to the configured raw data directory and renames the

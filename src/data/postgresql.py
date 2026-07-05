@@ -1,5 +1,6 @@
+from typing import Any
 
-import psycopg2
+import psycopg2  # type: ignore[import-untyped]
 from sqlalchemy import create_engine
 from src.config.data import POSTGRESQL_CONNECTION_STRING
 
@@ -35,7 +36,7 @@ def upload_dataframe_to_postgresql_db(df, table_name: str, if_exists: str = "rep
 
 def execute_sql_query(
     query: str
-) -> list[dict] | str:
+) -> list[dict[str, object]] | str:
     """
     Execute a SQL query against the PostgreSQL database and return the results.
 
