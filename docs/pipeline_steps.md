@@ -120,6 +120,9 @@ To execute the entire pipeline end-to-end:
 python notebooks/02_run_synthetic_data_pipeline.py
 ```
 
+### Notes on query generation
+Step 8 now runs both the generic query generator and the enhanced query generator, then merges their outputs into a single `data/synthetic/customer_queries.csv` file.
+
 ### Force a Complete Re-run
 To ignore completed steps, overwrite all existing data, and start fresh from Step 1:
 ```bash

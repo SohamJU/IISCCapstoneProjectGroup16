@@ -125,9 +125,9 @@ def step_07_generate_returns(force: bool, num_returns: int) -> None:
 
 
 def step_08_generate_queries(force: bool, total_queries: int) -> None:
-    """Step 8: Generate enhanced synthetic queries."""
+    """Step 8: Generate combined synthetic queries."""
     print("\n" + "=" * 70)
-    print("STEP 8: Generate Enhanced Queries")
+    print("STEP 8: Generate Combined Synthetic Queries")
     print("=" * 70)
     from src.data.synthetic_data_pipeline.enhanced_query_generator import run
 

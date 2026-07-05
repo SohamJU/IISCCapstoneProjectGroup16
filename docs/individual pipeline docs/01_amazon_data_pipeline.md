@@ -21,7 +21,7 @@ The pipeline is strictly sequential and divided into **13 discrete steps**. To e
 * **Step 5: Generate Customers**: Uses realistic distribution models (Faker) to generate `customers.csv` mapping directly to the distinct `user_id`s found in the real reviews.
 * **Step 6: Generate Orders & Items**: Simulates historical purchase behavior. It creates a `orders.csv` table and a relational `order_items.csv` table linking customers to the exact products they reviewed.
 * **Step 7: Generate Returns**: Synthesizes a `returns.csv` table. It models a realistic 5-15% return rate on delivered orders, ensuring logical date constraints (return date > delivery date).
-* **Step 8: Generate Queries**: Generates realistic synthetic customer support tickets (`customer_queries.csv`), simulating users asking about their specific orders or returns.
+* **Step 8: Generate Queries**: Runs both generic and enhanced query generators, then merges the results into a single `customer_queries.csv`, combining generic support questions with order-aware realistic tickets.
 * **Step 9: Generate Policy Documents**: Synthesizes vector-ready Markdown knowledge base files representing store policies (Returns, Shipping, etc.).
 
 ### Phase 3: Validation & Publishing (Steps 10-13)
