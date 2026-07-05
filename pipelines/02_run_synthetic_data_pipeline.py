@@ -63,7 +63,7 @@ def step_01_download(force: bool, max_reviews: int, streaming: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 1: Download Amazon Reviews 2023")
     print("=" * 70)
-    from src.data.pipeline.download_amazon_2023 import download_all
+    from src.data.synthetic_data_pipeline.download_amazon_2023 import download_all
 
     download_all(max_reviews=max_reviews, streaming=streaming, force=force)
 
@@ -73,7 +73,7 @@ def step_02_preprocess_products(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 2: Preprocess Product Catalog")
     print("=" * 70)
-    from src.data.pipeline.preprocess_products import run
+    from src.data.synthetic_data_pipeline.preprocess_products import run
 
     run(force=force)
 
@@ -83,7 +83,7 @@ def step_03_preprocess_reviews(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 3: Preprocess Reviews")
     print("=" * 70)
-    from src.data.pipeline.preprocess_reviews import run
+    from src.data.synthetic_data_pipeline.preprocess_reviews import run
 
     run(force=force)
 
@@ -93,7 +93,7 @@ def step_04_kaggle_check(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 4: Kaggle Compatibility Check")
     print("=" * 70)
-    from src.data.pipeline.check_kaggle_compatibility import run
+    from src.data.synthetic_data_pipeline.check_kaggle_compatibility import run
 
     run(force=force)
 
@@ -103,7 +103,7 @@ def step_05_generate_customers(force: bool, num_customers: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 5: Generate Customer Profiles")
     print("=" * 70)
-    from src.data.pipeline.generate_customers import run
+    from src.data.synthetic_data_pipeline.generate_customers import run
 
     run(num_customers=num_customers, force=force)
 
@@ -113,7 +113,7 @@ def step_06_generate_orders(force: bool, num_orders: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 6: Generate Orders + Order Items")
     print("=" * 70)
-    from src.data.pipeline.generate_orders import run
+    from src.data.synthetic_data_pipeline.generate_orders import run
 
     run(num_orders=num_orders, force=force)
 
@@ -123,7 +123,7 @@ def step_07_generate_returns(force: bool, num_returns: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 7: Generate Returns")
     print("=" * 70)
-    from src.data.pipeline.generate_returns import run
+    from src.data.synthetic_data_pipeline.generate_returns import run
 
     run(num_returns=num_returns, force=force)
 
@@ -133,7 +133,7 @@ def step_08_generate_queries(force: bool, total_queries: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 8: Generate Enhanced Queries")
     print("=" * 70)
-    from src.data.pipeline.enhanced_query_generator import run
+    from src.data.synthetic_data_pipeline.enhanced_query_generator import run
 
     run(total_queries=total_queries, force=force)
 
@@ -143,7 +143,7 @@ def step_09_generate_policies(force: bool, provider: str) -> None:
     print("\n" + "=" * 70)
     print("STEP 9: Generate Policy Documents")
     print("=" * 70)
-    from src.data.pipeline.generate_policies import run
+    from src.data.synthetic_data_pipeline.generate_policies import run
 
     run(provider=provider, force=force)
 
@@ -161,7 +161,7 @@ def step_11_generate_schemas(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 11: Generate Schemas")
     print("=" * 70)
-    from src.data.pipeline.generate_schemas import run
+    from src.data.synthetic_data_pipeline.generate_schemas import run
     
     run(force=force)
 
@@ -171,7 +171,7 @@ def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
     print("\n" + "=" * 70)
     print("STEP 12: Upload to PostgreSQL")
     print("=" * 70)
-    from src.data.pipeline.upload_postgres import run
+    from src.data.synthetic_data_pipeline.upload_postgres import run
     
     run(force=force, behavior=behavior)
 
@@ -180,7 +180,7 @@ def step_13_test_postgres() -> None:
     print("\n" + "=" * 70)
     print("STEP 13: Test PostgreSQL Upload")
     print("=" * 70)
-    from src.data.pipeline.test_postgres import run
+    from src.data.synthetic_data_pipeline.test_postgres import run
     
     run()
 
