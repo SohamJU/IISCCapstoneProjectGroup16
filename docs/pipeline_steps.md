@@ -155,6 +155,16 @@ python pipelines/02_run_synthetic_data_pipeline.py --step 12 --postgres-behavior
 python pipelines/02_run_synthetic_data_pipeline.py --step 12 --postgres-behavior replace
 ```
 
+Note on the default `skip` behavior
+----------------------------------
+The project configuration (`src/config/data.py`) defines `POSTGRESQL_UPLOAD_BEHAVIOR = "skip"` by default. When this value is set to `skip`, Step 12 (the Postgres upload step) will be a no-op: the pipeline will detect the setting and intentionally skip attempting any uploads to the cloud database. This is useful for local development or when you do not want the pipeline to modify the shared cloud database.
+
+If you want the pipeline to actually perform uploads, either:
+- Pass `--postgres-behavior append` or `--postgres-behavior replace` to the Step 12 invocation (examples above), or
+- Change the `POSTGRESQL_UPLOAD_BEHAVIOR` value in `src/config/data.py` to `append` or `replace` before running the pipeline.
+
+When using `append`, existing tables are retained and new rows are appended. When using `replace`, existing tables will be dropped and re-created from the pipeline output.
+
 ### PostgreSQL tables created by the Amazon pipeline
 When the Amazon synthetic pipeline uploads datasets to PostgreSQL, it uses the table mappings defined in `src/config/data.py`.
 
