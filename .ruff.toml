@@ -1,5 +1,7 @@
 line-length = 88
 exclude = [".git", "__pycache__", ".venv", "env", "venv", ".pytest_cache", "data", "archive", "output", "notebooks"]
-ignore = ["E203", "W503"]
-select = ["E", "F", "W", "C90"]
 target-version = "py312"
+
+[lint]
+ignore = ["E203"]
+select = ["E", "F", "W", "C90"]
