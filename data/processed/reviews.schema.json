@@ -1,0 +1,107 @@
+{
+  "file_name": "reviews.csv",
+  "num_rows": 11644,
+  "columns": [
+    {
+      "name": "review_id",
+      "type": "str",
+      "description": "Unique identifier for the review.",
+      "sample_values": [
+        "d1be68b5-767f-4bb3-8c91-fad68e0e5137",
+        "e5329114-eebc-466a-b0a4-9d0689eee1c7",
+        "7f8a31ee-4881-4ede-87e8-e01784f386ec"
+      ]
+    },
+    {
+      "name": "product_id",
+      "type": "str",
+      "description": "Unique identifier for the product (ASIN).",
+      "sample_values": [
+        "B075X8471B",
+        "B08P3VMW76",
+        "B0862W5BQ8"
+      ]
+    },
+    {
+      "name": "user_id",
+      "type": "str",
+      "description": "Unique identifier for the user who wrote the review.",
+      "sample_values": [
+        "AEM663T6XHZFWLODF4US2RCOCUSA",
+        "AGBFYI2DDIKXC5Y4FARTYDTQBMFQ",
+        "AEVWAM3YWN5URJVJIZZ6XPD2MKIA"
+      ]
+    },
+    {
+      "name": "rating",
+      "type": "float64",
+      "description": "Review rating (1-5 stars).",
+      "sample_values": [
+        4.0,
+        5.0,
+        4.0
+      ],
+      "unique_values": [
+        4.0,
+        5.0,
+        1.0,
+        3.0,
+        2.0
+      ]
+    },
+    {
+      "name": "title",
+      "type": "str",
+      "description": "Name or title of the product.",
+      "sample_values": [
+        "Four Stars",
+        "Nice lightweight sleeve",
+        "Did anyone use this for a recessed TV mount?"
+      ]
+    },
+    {
+      "name": "text",
+      "type": "str",
+      "description": "Text content of the review.",
+      "sample_values": [
+        "Pretty cool!!!Thanks Amazon.",
+        "I am not sure how much protection this provides - certainly less than a camera bag - but it will protect against scratches and small bumps. It's fairly thin. It fits my Canon EOS Rebel T6i w/ kit lens very well - like a glove.",
+        "I believe the electrical boxes are made especially to fit in a recessed (in wall) TV mount fixture. That is perhaps why it is made narrower. In the comments I am not seeing anyone using it for this. I would love to hear if someone used it placed inside a recessed mount and how it worked."
+      ]
+    },
+    {
+      "name": "timestamp",
+      "type": "str",
+      "description": "Time the review was submitted.",
+      "sample_values": [
+        "2017-10-31 23:07:42.120",
+        "2017-01-02 03:24:55.000",
+        "2017-01-15 12:00:15.000"
+      ]
+    },
+    {
+      "name": "verified_purchase",
+      "type": "bool",
+      "description": "Indicates if the review is from a verified purchase.",
+      "sample_values": [
+        true,
+        true,
+        false
+      ],
+      "unique_values": [
+        true,
+        false
+      ]
+    },
+    {
+      "name": "helpful_vote",
+      "type": "int64",
+      "description": "Number of helpful votes received on a review.",
+      "sample_values": [
+        0,
+        0,
+        0
+      ]
+    }
+  ]
+}
