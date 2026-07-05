@@ -42,16 +42,35 @@ This document outlines the steps required to set up the project environment and 
    - Ensure a `.env` file exists in the root directory.
    - It should contain necessary keys such as database connection credentials (e.g., `POSTGRESQL_AIVEN_PASSWORD`, `POSTGRESQL_HOST`, etc.).
 
+### 2. VS Code Configuration
+The workspace includes `.vscode/settings.json` and `.vscode/launch.json` to help enable linting and debugging in VS Code.
+
+- `.vscode/settings.json`
+  - `python.linting.enabled`: turns Python linting on in VS Code.
+  - `python.linting.ruffEnabled`: enables the Ruff linter specifically.
+  - `python.linting.ruffPath`: points VS Code to the Ruff executable in the local virtual environment.
+  - `python.linting.ruffArgs`: passes the project config file `.ruff.toml` to Ruff.
+  - `python.envFile`: loads environment variables from the repository `.env` file.
+
+- `.vscode/launch.json`
+  - `name`: the debug configuration label shown in VS Code.
+  - `type`: uses `debugpy` for Python debugging.
+  - `request`: `launch` means VS Code starts a new debug session.
+  - `program`: `${file}` tells VS Code to run the currently-open file.
+  - `console`: `integratedTerminal` runs output in the built-in terminal.
+  - `env`: sets `PYTHONPATH` so imports resolve from the workspace root.
+
+To enable linting and debugging in VS Code:
+1. Open the workspace in VS Code.
+2. Confirm `.vscode/settings.json` exists with the lint settings above.
+3. Confirm `.vscode/launch.json` exists with the debug configuration above.
+4. Open any Python file and save it to trigger Ruff linting automatically.
+
 ---
-
-
-
-## 2. Running the Twitter Processing Pipeline
-
 The Twitter processing pipeline prepares customer support conversation data for downstream tasks, including conversation history creation and repository-ready CSV output.
 The details are available in the file 'docs/individual_pipeline_docs/01_twitter_data_pipeline.md'
 
-### Run the Twitter preprocessing script
+### 3. Run the Twitter preprocessing script
 From the repository root, execute:
 ```bash
 python src/data/twitter_data_pipeline/run_twitter_preprocessing.py --dataset twitter --twitter-path archive/twcs/twcs.csv
@@ -73,7 +92,7 @@ python pipelines/01_run_twitter_data_pipeline.py
 ---
 
 
-## 3. Running the Synthetic Data Pipeline
+## 4. Running the Synthetic Data Pipeline
 
 The synthetic data pipeline (`pipelines/01_run_synthetic_data_pipeline.py`) manages the ETL process, generates synthetic records (customers, orders, returns, queries), and uploads them to a cloud PostgreSQL database.
 
