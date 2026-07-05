@@ -88,9 +88,9 @@ Columns:
 
 ## Files Added Or Updated For This Flow
 
-- `src/data/preprocessing.py`
-- `src/data/unstructured_loaders.py`
-- `src/data/unstructured_preprocessing.py`
+- `src/data/twitter_data_pipeline/preprocessing.py`
+- `src/data/twitter_data_pipeline/unstructured_loaders.py`
+- `src/data/twitter_data_pipeline/unstructured_preprocessing.py`
 - `src/config/unstructured_data.py`
 - `src/memory/conversation_memory.py`
 - `src/memory/session_manager.py`
@@ -113,13 +113,13 @@ python3 scripts/run_preprocessing.py --dataset twitter
 This is useful for quick validation.
 
 ```bash
-python3 scripts/run_preprocessing.py --dataset twitter --twitter-path archive/sample.csv
+python3 src/data/twitter_data_pipeline/run_twitter_preprocessing.py --dataset twitter --twitter-path archive/sample.csv
 ```
 
 ### Keep only customer-side tweets
 
 ```bash
-python3 scripts/run_preprocessing.py --dataset twitter --customer-only
+python3 src/data/twitter_data_pipeline/run_twitter_preprocessing.py --dataset twitter --customer-only
 ```
 
 ## Python Usage
