@@ -93,6 +93,7 @@ numpy==2.5.0
     # via
     #   datasets
     #   pandas
+    #   pandas-stubs
 packaging==26.2
     # via
     #   datasets
@@ -102,6 +103,8 @@ pandas==3.0.3
     # via
     #   iisccapstoneprojectgroup16 (pyproject.toml)
     #   datasets
+pandas-stubs==3.0.3.260530
+    # via iisccapstoneprojectgroup16 (pyproject.toml)
 propcache==0.5.2
     # via
     #   aiohttp
