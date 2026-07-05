@@ -2,7 +2,7 @@ from src.memory.conversation_memory import ConversationMemory
 from src.memory.session_manager import SessionManager
 
 
-def test_conversation_memory_builds_recent_context():
+def test_conversation_memory_builds_recent_context() -> None:
     memory = ConversationMemory(session_id="session-1")
 
     memory.add_turn("customer", "My order has not arrived.")
@@ -16,7 +16,7 @@ def test_conversation_memory_builds_recent_context():
     assert "My order has not arrived." not in context
 
 
-def test_session_manager_reuses_existing_session():
+def test_session_manager_reuses_existing_session() -> None:
     manager = SessionManager()
 
     first_session = manager.append_turn(

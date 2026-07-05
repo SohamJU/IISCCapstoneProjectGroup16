@@ -1,10 +1,11 @@
+from typing import Any
 
-import psycopg2
+import psycopg2  # type: ignore[import-untyped]
 from sqlalchemy import create_engine
 from src.config.data import POSTGRESQL_CONNECTION_STRING, POSTGRESQL_TABLE_NAME
 
 
-def upload_dataframe_to_postgresql_db(df, if_exists="fail"):
+def upload_dataframe_to_postgresql_db(df: Any, if_exists: str = "fail") -> None:
     """
     Upload a pandas DataFrame to a PostgreSQL database.
 
@@ -27,7 +28,7 @@ def upload_dataframe_to_postgresql_db(df, if_exists="fail"):
 
 def execute_sql_query(
     query: str
-) -> list[dict] | str:
+) -> list[dict[str, object]] | str:
     """
     Execute a SQL query against the PostgreSQL database and return the results.
 

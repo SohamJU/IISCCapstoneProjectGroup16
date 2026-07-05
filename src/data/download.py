@@ -1,10 +1,12 @@
 """Dataset downloading utilities."""
 
-import kagglehub
+from pathlib import Path
+
+import kagglehub  # type: ignore[import-untyped]
 from src.config.data import AMAZON_KAGGLE_DATASET, AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
-def download_electronics_reviews(force_download: bool = False):
+def download_electronics_reviews(force_download: bool = False) -> Path:
     """Download Amazon Electronics ratings dataset from Kaggle.
 
     Downloads the dataset to the configured raw data directory and renames the
@@ -35,6 +37,9 @@ def download_electronics_reviews(force_download: bool = False):
     if downloaded_file:
         downloaded_file.rename(target_filepath)
         print(f"Dataset renamed to {target_filepath}")
+        return target_filepath
+
+    raise FileNotFoundError(f"Downloaded dataset file not found in {AMAZON_RAW_DATA_DIR}")
 
 
 if __name__ == "__main__":
