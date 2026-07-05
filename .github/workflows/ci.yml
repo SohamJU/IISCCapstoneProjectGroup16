@@ -4,7 +4,6 @@ on:
   push:
     branches:
     - main
-    - feature/add-ci
   pull_request:
     branches:
     - main
@@ -34,7 +33,6 @@ jobs:
 
       - name: Run linting
         run: ruff check src tests
-        continue-on-error: true
 
       - name: Run type checking
         run: mypy --config-file mypy.ini src tests
