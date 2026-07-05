@@ -44,11 +44,41 @@ This document outlines the steps required to set up the project environment and 
 
 ---
 
-## 2. Running the Synthetic Data Pipeline
+
+
+## 2. Running the Twitter Processing Pipeline
+
+The Twitter processing pipeline prepares customer support conversation data for downstream tasks, including conversation history creation and repository-ready CSV output.
+The details are available in the file 'docs/individual_pipeline_docs/01_twitter_data_pipeline.md'
+
+### Run the Twitter preprocessing script
+From the repository root, execute:
+```bash
+python src/data/twitter_data_pipeline/run_twitter_preprocessing.py --dataset twitter --twitter-path archive/twcs/twcs.csv
+```
+
+### Run the wrapper script in `pipelines/`
+If you prefer the pipeline wrapper, use:
+```bash
+python pipelines/01_run_twitter_data_pipeline.py
+```
+
+### Notes
+- The script supports other preprocessing targets:
+  - `--dataset ratings` for the structured ratings dataset
+  - `--dataset product` for product catalog preprocessing
+  - `--dataset all` to run all preprocessing flows
+- The default `--twitter-path` location is `archive/sample.csv` when the file path is omitted.
+
+---
+
+
+## 3. Running the Synthetic Data Pipeline
 
 The synthetic data pipeline (`pipelines/01_run_synthetic_data_pipeline.py`) manages the ETL process, generates synthetic records (customers, orders, returns, queries), and uploads them to a cloud PostgreSQL database.
 
 The pipeline consists of 13 discrete steps. By default, it detects already completed steps and safely skips them.
+The details are available in the file 'docs/individual_pipeline_docs/01_amazon_data_pipeline.md'
 
 ### Run the Full Pipeline
 To execute the entire pipeline end-to-end:
@@ -89,3 +119,7 @@ python pipelines/02_run_synthetic_data_pipeline.py --step 12 --postgres-behavior
 ```
 
 For more detailed information regarding the individual 13 steps and the variables defined in `src/config/data.py`, refer to `docs/individual pipeline docs/01_data_pipeline.md`.
+
+---
+
+
