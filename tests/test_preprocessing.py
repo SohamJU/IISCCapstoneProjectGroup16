@@ -103,9 +103,13 @@ def test_build_conversation_history_aggregates_context():
 
     history_df = build_conversation_history(conversations_df)
 
+    expected_customer_text = "customer: My headphones stopped working."
     assert history_df.iloc[0]["turn_count"] == 2
-    assert "customer: My headphones stopped working." in history_df.iloc[0]["conversation_text"]
-    assert history_df.iloc[0]["latest_customer_text"] == "My headphones stopped working."
+    assert expected_customer_text in history_df.iloc[0]["conversation_text"]
+    assert (
+        history_df.iloc[0]["latest_customer_text"]
+        == "My headphones stopped working."
+    )
 
 
 def test_preprocess_product_catalog_infers_text_fields():

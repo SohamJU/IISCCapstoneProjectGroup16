@@ -32,17 +32,11 @@ if sys.stdout.encoding.lower() != 'utf-8':
     except AttributeError:
         pass
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 import pandas as pd
 
 from src.config.data import (
     AMAZON_2023_MAX_REVIEWS,
     CUSTOMERS_PATH,
-    CUSTOMER_QUERIES_PATH,
-    KNOWLEDGE_BASE_DIR,
     NUM_CUSTOMERS,
     NUM_ORDERS,
     NUM_RETURNS,
@@ -52,6 +46,8 @@ from src.config.data import (
     RETURNS_PATH,
     REVIEWS_PROCESSED_PATH,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -162,7 +158,7 @@ def step_11_generate_schemas(force: bool) -> None:
     print("STEP 11: Generate Schemas")
     print("=" * 70)
     from src.data.synthetic_data_pipeline.generate_schemas import run
-    
+
     run(force=force)
 
 
@@ -172,7 +168,7 @@ def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
     print("STEP 12: Upload to PostgreSQL")
     print("=" * 70)
     from src.data.synthetic_data_pipeline.upload_postgres import run
-    
+
     run(force=force, behavior=behavior)
 
 def step_13_test_postgres() -> None:
@@ -181,7 +177,7 @@ def step_13_test_postgres() -> None:
     print("STEP 13: Test PostgreSQL Upload")
     print("=" * 70)
     from src.data.synthetic_data_pipeline.test_postgres import run
-    
+
     run()
 
 
@@ -190,7 +186,7 @@ def step_13_test_postgres() -> None:
 # INTEGRITY VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _run_validation() -> None:
+def _run_validation() -> None:  # noqa: C901
     """Run all 13 integrity checks from the plan."""
     checks_passed = 0
     checks_failed = 0
@@ -249,7 +245,11 @@ def _run_validation() -> None:
     _check("C3: Kaggle compatibility report exists", report_path.exists())
 
     # ── Check 4-6: FK integrity ─────────────────────────────────────────
-    if ORDERS_PATH.exists() and CUSTOMERS_PATH.exists() and PRODUCT_CATALOG_PATH.exists():
+    if (
+        ORDERS_PATH.exists()
+        and CUSTOMERS_PATH.exists()
+        and PRODUCT_CATALOG_PATH.exists()
+    ):
         orders = pd.read_csv(ORDERS_PATH)
         customers = pd.read_csv(CUSTOMERS_PATH, usecols=["customer_id"])
         catalog = pd.read_csv(PRODUCT_CATALOG_PATH, usecols=["product_id"])
@@ -301,7 +301,8 @@ def _run_validation() -> None:
 
         # C8: return.product_id matches an item in that order
         ret_items = returns.merge(
-            items[["order_id", "product_id"]].rename(columns={"product_id": "item_pid"}),
+            items[["order_id", "product_id"]]
+            .rename(columns={"product_id": "item_pid"}),
             on="order_id",
             how="left",
         )
@@ -459,15 +460,28 @@ def parse_args() -> argparse.Namespace:
         default=AMAZON_2023_MAX_REVIEWS,
         help="Max reviews per category for download.",
     )
-    parser.add_argument("--streaming", action="store_true", help="Use streaming download.")
     parser.add_argument(
-        "--num-customers", type=int, default=NUM_CUSTOMERS, help="Target customer count."
+        "--streaming",
+        action="store_true",
+        help="Use streaming download.",
     )
     parser.add_argument(
-        "--num-orders", type=int, default=NUM_ORDERS, help="Target order count."
+        "--num-customers",
+        type=int,
+        default=NUM_CUSTOMERS,
+        help="Target customer count.",
     )
     parser.add_argument(
-        "--num-returns", type=int, default=NUM_RETURNS, help="Target return count."
+        "--num-orders",
+        type=int,
+        default=NUM_ORDERS,
+        help="Target order count.",
+    )
+    parser.add_argument(
+        "--num-returns",
+        type=int,
+        default=NUM_RETURNS,
+        help="Target return count.",
     )
     parser.add_argument(
         "--total-queries", type=int, default=500, help="Number of enhanced queries."

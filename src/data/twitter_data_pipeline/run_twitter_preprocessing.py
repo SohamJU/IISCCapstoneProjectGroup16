@@ -12,7 +12,9 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import pandas as pd
 
-from src.data.twitter_data_pipeline.unstructured_loaders import load_twitter_support_conversations
+from src.data.twitter_data_pipeline.unstructured_loaders import (
+    load_twitter_support_conversations,
+)
 from src.data.twitter_data_pipeline.unstructured_preprocessing import (
     build_conversation_history,
     preprocess_customer_support_conversations,
