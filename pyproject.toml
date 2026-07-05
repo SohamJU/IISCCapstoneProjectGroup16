@@ -14,4 +14,5 @@ dependencies = [
     "faker>=37.0.0",
     "dataset>=2.0.0",
     "pandas-stubs>=3.0.3.260530",
+    "ruff>=0.15.20",
 ]

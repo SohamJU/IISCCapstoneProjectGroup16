@@ -133,6 +133,8 @@ requests==2.34.2
     #   kagglesdk
 rich==15.0.0
     # via typer
+ruff==0.15.20
+    # via iisccapstoneprojectgroup16 (pyproject.toml)
 shellingham==1.5.4
     # via typer
 six==1.17.0
