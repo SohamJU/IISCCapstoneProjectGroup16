@@ -416,12 +416,25 @@ def _run_validation() -> None:  # noqa: C901
     else:
         _skip("C12: order total check", "required files missing")
 
-    # ── Check 13: synthetic_generator.py unmodified ────────────────────
-    orig_path = Path(PROJECT_ROOT) / "src" / "data" / "synthetic_generator.py"
+    # ── Check 13: query generator modules exist ─────────────────────────
+    generic_path = (
+        Path(PROJECT_ROOT)
+        / "src"
+        / "data"
+        / "synthetic_data_pipeline"
+        / "generic_query_generator.py"
+    )
+    enhanced_path = (
+        Path(PROJECT_ROOT)
+        / "src"
+        / "data"
+        / "synthetic_data_pipeline"
+        / "enhanced_query_generator.py"
+    )
     _check(
-        "C13: synthetic_generator.py exists (frozen)",
-        orig_path.exists(),
-        "File missing or deleted",
+        "C13: query generator modules exist",
+        generic_path.exists() and enhanced_path.exists(),
+        "Missing generic_query_generator.py or enhanced_query_generator.py",
     )
 
     # ── Summary ────────────────────────────────────────────────────────
