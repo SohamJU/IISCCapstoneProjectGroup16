@@ -35,7 +35,7 @@ jobs:
         run: ruff check src tests
 
       - name: Run type checking
-        run: mypy --config-file mypy.ini src tests
+        run: mypy .
         continue-on-error: true
 
       - name: Run tests
