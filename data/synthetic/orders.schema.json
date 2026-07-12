@@ -1,0 +1,118 @@
+{
+  "file_name": "orders.csv",
+  "num_rows": 10000,
+  "columns": [
+    {
+      "name": "order_id",
+      "type": "str",
+      "description": "Unique identifier for the order.",
+      "sample_values": [
+        "ORD-000001",
+        "ORD-000002",
+        "ORD-000003"
+      ]
+    },
+    {
+      "name": "customer_id",
+      "type": "str",
+      "description": "Unique identifier for the customer.",
+      "sample_values": [
+        "AHZIJGKEWRTAEOZ673G5B3SNXEGQ",
+        "AEFKF6R2GUSK2AWPSWRR4ZO36JVQ",
+        "AEFKF6R2GUSK2AWPSWRR4ZO36JVQ"
+      ]
+    },
+    {
+      "name": "order_date",
+      "type": "str",
+      "description": "Date the order was placed.",
+      "sample_values": [
+        "2019-12-09",
+        "2019-05-28",
+        "2019-04-25"
+      ]
+    },
+    {
+      "name": "status",
+      "type": "str",
+      "description": "Current status of the order or return (e.g., delivered, pending, approved).",
+      "sample_values": [
+        "delivered",
+        "delivered",
+        "delivered"
+      ],
+      "unique_values": [
+        "delivered",
+        "shipped",
+        "cancelled",
+        "processing",
+        "returned"
+      ]
+    },
+    {
+      "name": "tracking_number",
+      "type": "str",
+      "description": "Shipping tracking number.",
+      "sample_values": [
+        "TRK-0IFD0TVBDIVU",
+        "TRK-1FPKH1DNMMJB",
+        "TRK-UZBIKCIDKWNN"
+      ]
+    },
+    {
+      "name": "est_delivery_date",
+      "type": "str",
+      "description": "Estimated date of delivery.",
+      "sample_values": [
+        "2019-12-13",
+        "2019-06-04",
+        "2019-05-02"
+      ]
+    },
+    {
+      "name": "actual_delivery_date",
+      "type": "str",
+      "description": "Actual date of delivery.",
+      "sample_values": [
+        "2019-12-11",
+        "2019-06-02",
+        "2019-05-05"
+      ]
+    },
+    {
+      "name": "payment_status",
+      "type": "str",
+      "description": "Status of the payment.",
+      "sample_values": [
+        "paid",
+        "paid",
+        "paid"
+      ],
+      "unique_values": [
+        "paid",
+        "refunded",
+        "pending"
+      ]
+    },
+    {
+      "name": "shipping_address",
+      "type": "str",
+      "description": "Customer's shipping address.",
+      "sample_values": [
+        "433 Jill Springs, New Roberttown, CO 29158",
+        "386 Shane Harbors, Port Lindachester, MA 36922",
+        "16155 Roman Stream Suite 816, New Kellystad, OK 25704"
+      ]
+    },
+    {
+      "name": "total_amount",
+      "type": "float64",
+      "description": "Total amount paid for the order.",
+      "sample_values": [
+        50.46,
+        44.81,
+        26.21
+      ]
+    }
+  ]
+}

@@ -75,7 +75,7 @@ def preprocess_ratings(
 
 def save_processed_data(
     df: pd.DataFrame
-):
+) -> None:
     """
     Save processed dataframe.
     """

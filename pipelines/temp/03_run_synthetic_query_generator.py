@@ -79,7 +79,13 @@ TRANSITIONS = [
 # -----------------------------------------------------------------------------
 # CORE STYLE FUNCTIONS
 # -----------------------------------------------------------------------------
-def build_query(product, problem, persona, time_marker, intent_set):
+def build_query(
+    product: str,
+    problem: str,
+    persona: str,
+    time_marker: str,
+    intent_set: list[str],
+) -> str:
     """
     Builds single or multi-sentence queries organically matching intents and personas.
     """
@@ -153,7 +159,7 @@ def build_query(product, problem, persona, time_marker, intent_set):
 # -----------------------------------------------------------------------------
 # MULTI-INTENT MIXER
 # -----------------------------------------------------------------------------
-def sample_intents():
+def sample_intents() -> list[str]:
     """
     65% single intent, 35% multi-intent (to generate longer multi-line tickets)
     """
@@ -193,7 +199,7 @@ def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.Da
 # -----------------------------------------------------------------------------
 # SAVE FUNCTION
 # -----------------------------------------------------------------------------
-def save_synthetic_queries(df: pd.DataFrame, filename: str = None) -> Path:
+def save_synthetic_queries(df: pd.DataFrame, filename: str | None = None) -> Path:
     """
     Save synthetic queries DataFrame to <project_root>/data/synthetic/
     Safely handles both scripted executions and interactive environments.

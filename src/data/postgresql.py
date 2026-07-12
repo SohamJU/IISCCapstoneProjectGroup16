@@ -1,33 +1,44 @@
+from typing import Any
 
 import psycopg2
+import pandas as pd
 from sqlalchemy import create_engine
-from src.config.data import POSTGRESQL_CONNECTION_STRING, POSTGRESQL_TABLE_NAME
+from sqlalchemy.engine import Engine
+from src.config.data import POSTGRESQL_CONNECTION_STRING
 
 
-def upload_dataframe_to_postgresql_db(df, if_exists="fail"):
+def get_db_engine() -> Engine:
+    """
+    Get a SQLAlchemy engine connected to the PostgreSQL database.
+    Useful for Pandas or Agent connections.
+    """
+    return create_engine(POSTGRESQL_CONNECTION_STRING)
+
+
+def upload_dataframe_to_postgresql_db(df: pd.DataFrame, table_name: str, if_exists: str = "replace") -> None:
     """
     Upload a pandas DataFrame to a PostgreSQL database.
 
     Args:
         df: The pandas DataFrame to upload.
+        table_name: The name of the target SQL table.
         if_exists: How to handle existing data in the table. Options are 'fail', 'replace', or 'append'.
     """
     # Create a SQLAlchemy engine using the connection string
-    sql_engine = create_engine(POSTGRESQL_CONNECTION_STRING)
+    sql_engine = get_db_engine()
 
-    # Upload DataFrame to Aiven PostgreSQL
-    # Options for if_exists: 'fail', 'replace', or 'append'
+    # Upload DataFrame to PostgreSQL
     df.to_sql(
-        name=POSTGRESQL_TABLE_NAME,       # Name of the target SQL table
+        name=table_name,            # Name of the target SQL table
         con=sql_engine,             # Database connection engine
-        if_exists=if_exists,    # Drops and recreates the table if it exists
-        index=False             # Prevents pandas index from becoming a column
+        if_exists=if_exists, # type: ignore[arg-type] # Drops and recreates the table if it exists
+        index=False                 # Prevents pandas index from becoming a column
     )
 
 
 def execute_sql_query(
     query: str
-) -> list[dict] | str:
+) -> list[dict[str, object]] | str:
     """
     Execute a SQL query against the PostgreSQL database and return the results.
 
@@ -46,7 +57,7 @@ def execute_sql_query(
         # Execute the query
         cur.execute(query)
         # Fetch all results
-        columns = [desc[0] for desc in cur.description]
+        columns = [desc[0] for desc in cur.description]  # type: ignore[union-attr]
         results = cur.fetchall()
         # Close communication with the database
         cur.close()

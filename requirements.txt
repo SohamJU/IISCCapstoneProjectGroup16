@@ -1,7 +1,0 @@
-# Add dependencies here
-# To be refined with soft version pins after testing
-python-dotenv
-kagglehub
-pandas
-sqlalchemy
-psycopg2-binary
