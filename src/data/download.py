@@ -1,8 +1,8 @@
 """Dataset downloading utilities."""
 
-from pathlib import Path
-
-import kagglehub  # type: ignore[import-untyped]
+import kagglehub
+import shutil
+import pathlib
 from src.config.data import AMAZON_KAGGLE_DATASET, AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
@@ -27,19 +27,16 @@ def download_electronics_reviews(force_download: bool = False) -> Path:
 
     download_path = kagglehub.dataset_download(
         AMAZON_KAGGLE_DATASET,
-        output_dir=AMAZON_RAW_DATA_DIR,
         force_download=force_download,
     )
     print(f"Dataset downloaded to {download_path}")
     
-    # Rename downloaded csv (with any name) to the target filename
-    downloaded_file = next((f for f in AMAZON_RAW_DATA_DIR.iterdir() if f.is_file() and f.suffix == ".csv"), None)
+    # Copy downloaded csv (with any name) to the target filename
+    download_dir = pathlib.Path(download_path)
+    downloaded_file = next((f for f in download_dir.iterdir() if f.is_file() and f.suffix == ".csv"), None)
     if downloaded_file:
-        downloaded_file.rename(target_filepath)
-        print(f"Dataset renamed to {target_filepath}")
-        return target_filepath
-
-    raise FileNotFoundError(f"Downloaded dataset file not found in {AMAZON_RAW_DATA_DIR}")
+        shutil.copy2(downloaded_file, target_filepath)
+        print(f"Dataset copied to {target_filepath}")
 
 
 if __name__ == "__main__":

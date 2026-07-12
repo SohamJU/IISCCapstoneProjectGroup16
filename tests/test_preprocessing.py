@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.data.unstructured_preprocessing import (
+from src.data.twitter_data_pipeline.unstructured_preprocessing import (
     build_conversation_history,
     preprocess_customer_support_conversations,
     preprocess_product_catalog,
@@ -103,13 +103,12 @@ def test_build_conversation_history_aggregates_context() -> None:
 
     history_df = build_conversation_history(conversations_df)
 
+    expected_customer_text = "customer: My headphones stopped working."
     assert history_df.iloc[0]["turn_count"] == 2
+    assert expected_customer_text in history_df.iloc[0]["conversation_text"]
     assert (
-        "customer: My headphones stopped working."
-        in history_df.iloc[0]["conversation_text"]
-    )
-    assert (
-        history_df.iloc[0]["latest_customer_text"] == "My headphones stopped working."
+        history_df.iloc[0]["latest_customer_text"]
+        == "My headphones stopped working."
     )
 
 
