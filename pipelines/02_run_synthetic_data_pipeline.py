@@ -28,7 +28,7 @@ from pathlib import Path
 # Fix unicode encode errors on Windows
 if sys.stdout.encoding.lower() != 'utf-8':
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[union-attr]
     except AttributeError:
         pass
 

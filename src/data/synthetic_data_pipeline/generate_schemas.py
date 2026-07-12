@@ -10,6 +10,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -89,9 +90,9 @@ COLUMN_DESCRIPTIONS = {
 }
 
 
-def infer_schema(df: pd.DataFrame, file_path: Path) -> dict:
+def infer_schema(df: pd.DataFrame, file_path: Path) -> dict[str, Any]:
     """Infer the schema and structural details of a pandas DataFrame."""
-    schema = {
+    schema: dict[str, Any] = {
         "file_name": file_path.name,
         "num_rows": len(df),
         "columns": []
