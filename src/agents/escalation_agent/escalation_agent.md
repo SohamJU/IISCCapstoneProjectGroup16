@@ -49,6 +49,57 @@ When a handoff is created, the summary should include:
 - Call `EscalationAgent.reset_memory()` when the session ends or when a clean slate is needed.
 - The `retrieve_knowledge` tool is currently a placeholder and should be connected to the repository's RAG retriever if available.
 
+## Connecting the Escalation Agent with Other Agents
+The escalation agent is best treated as a safety and handoff layer rather than as a primary business agent. In practice, it should sit after the main agents such as the product, order, or recommendation agents.
+
+### Recommended integration pattern
+1. A customer message enters the system.
+2. A specialist agent (for example, product or order) tries to resolve the request.
+3. The orchestrator or router passes the original message plus the specialist agent's response to the escalation agent.
+4. The escalation agent decides whether the issue should stay in AI flow or be handed off to a human team.
+
+### Why this pattern works
+- It keeps the escalation logic centralized in one place.
+- It avoids duplicate escalation rules across multiple agents.
+- It preserves context for the human agent because the escalation summary includes the customer intent, prior actions, and pain points.
+
+### Simple flow
+```text
+Customer message
+    -> Product / Order / Recommendation agent
+    -> Router / Orchestrator
+    -> Escalation Agent
+    -> Either: continue AI resolution or create a human handoff summary
+```
+
+### Example: product agent + escalation agent
+```python
+from src.agents.escalation_agent import EscalationAgent
+from src.agents.product_agent import ProductRecommendationAgent
+
+product_agent = ProductRecommendationAgent(session_id="session_123")
+escalation_agent = EscalationAgent(session_id="session_123")
+
+customer_message = (
+    "I bought a laptop last week, but it is not working and I want a refund."
+)
+
+product_reply = product_agent.chat(customer_message)
+
+combined_context = (
+    f"Customer message: {customer_message}\n"
+    f"Product agent response: {product_reply}"
+)
+
+result = escalation_agent.chat(combined_context)
+print(result)
+```
+
+### How this would work in practice
+- If the product agent solves the issue, the escalation agent may return a short confirmation or no escalation.
+- If the customer is angry, asks for a refund, mentions policy exceptions, or the product agent cannot resolve the issue, the escalation agent will classify the request and produce a handoff summary.
+- The handoff can then be forwarded to a support queue, ticket system, or human support dashboard.
+
 ## Example Usage
 ```python
 from src.agents.escalation_agent import EscalationAgent
