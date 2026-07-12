@@ -2,20 +2,35 @@
 
 from __future__ import annotations
 
-from typing import Any
+import sys
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from langchain_core.tools import tool
 
-from src.config.data import KNOWLEDGE_BASE_DIR
+try:
+    from src.config.data import KNOWLEDGE_BASE_DIR
+except Exception:
+    KNOWLEDGE_BASE_DIR = ROOT_DIR / "data" / "knowledge_base"
 
 
 @tool
 def retrieve_knowledge(query: str) -> str:
     """Retrieve related policy or knowledge base content for escalation decisions."""
     # Placeholder implementation. Replace this with a real RAG retriever.
+    if not KNOWLEDGE_BASE_DIR.exists():
+        return (
+            "No retrieval backend is configured yet. "
+            "Also could not find the local knowledge base directory."
+        )
+
     return (
-        f"No retrieval backend is configured yet."
-        f" Received query: {query}"
+        "No retrieval backend is configured yet. "
+        f"Received query: {query}. "
+        f"Knowledge base is available at {KNOWLEDGE_BASE_DIR}."
     )
 
 

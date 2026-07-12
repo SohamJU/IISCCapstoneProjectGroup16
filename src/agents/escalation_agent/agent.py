@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Any
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
 from langchain_core.messages import HumanMessage
 from langgraph.checkpoint.memory import MemorySaver
