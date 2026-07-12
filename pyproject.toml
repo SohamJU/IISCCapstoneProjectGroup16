@@ -13,6 +13,9 @@ dependencies = [
     "datasets>=3.5.0",
     "faker>=37.0.0",
     "dataset>=2.0.0",
+    "openai",
+    "faker",
+    "google-genai",
 ]
 
 [project.optional-dependencies]
@@ -22,4 +25,5 @@ dev = [
     "ruff>=0.15.20",
     "mypy>=1.7.0",
     "pandas-stubs>=3.0.3.260530",
+    "types-psycopg2"
 ]

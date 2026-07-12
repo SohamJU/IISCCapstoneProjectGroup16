@@ -15,6 +15,7 @@ Usage:
 
 import random
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -192,7 +193,14 @@ def _load_real_order_ids() -> list[str]:
 # -----------------------------------------------------------------------------
 # CORE STYLE FUNCTIONS
 # -----------------------------------------------------------------------------
-def build_query(product, problem, persona, time_marker, intent_set, order_ids):  # noqa: C901
+def build_query(
+    product: str,
+    problem: str,
+    persona: str,
+    time_marker: str,
+    intent_set: list[str],
+    order_ids: list[str],
+) -> str:  # noqa: C901
     """Builds single or multi-sentence queries organically matching intents and personas."""
     sentences = []
 
@@ -302,7 +310,7 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids): 
 # -----------------------------------------------------------------------------
 # MULTI-INTENT MIXER
 # -----------------------------------------------------------------------------
-def sample_intents():
+def sample_intents() -> list[str]:
     """65% single intent, 35% multi-intent."""
     if random.random() < 0.65:
         return [random.choice(ALL_INTENTS)]
@@ -325,7 +333,7 @@ def generate_enhanced_queries(total_queries: int = 500, seed: int = 42) -> pd.Da
 
     print(f"  Using {len(products)} product names, {len(order_ids)} order IDs")
 
-    rows = []
+    rows: list[dict[str, Any]] = []
     for _ in range(total_queries):
         intents = sample_intents()
         product = random.choice(products)
