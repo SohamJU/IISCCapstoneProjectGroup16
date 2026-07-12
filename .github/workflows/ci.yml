@@ -39,4 +39,4 @@ jobs:
         run: mypy .
 
       - name: Run unit tests
-        run: pytest . --cov=src
+        run: pytest tests/ --cov=src
