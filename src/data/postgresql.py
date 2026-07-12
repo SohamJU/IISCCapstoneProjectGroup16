@@ -1,10 +1,13 @@
+from typing import Any
 
 import psycopg2
+import pandas as pd
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from src.config.data import POSTGRESQL_CONNECTION_STRING
 
 
-def get_db_engine():
+def get_db_engine() -> Engine:
     """
     Get a SQLAlchemy engine connected to the PostgreSQL database.
     Useful for Pandas or Agent connections.
@@ -12,7 +15,7 @@ def get_db_engine():
     return create_engine(POSTGRESQL_CONNECTION_STRING)
 
 
-def upload_dataframe_to_postgresql_db(df, table_name: str, if_exists: str = "replace"):
+def upload_dataframe_to_postgresql_db(df: pd.DataFrame, table_name: str, if_exists: str = "replace") -> None:
     """
     Upload a pandas DataFrame to a PostgreSQL database.
 
@@ -28,14 +31,14 @@ def upload_dataframe_to_postgresql_db(df, table_name: str, if_exists: str = "rep
     df.to_sql(
         name=table_name,            # Name of the target SQL table
         con=sql_engine,             # Database connection engine
-        if_exists=if_exists,        # Drops and recreates the table if it exists
+        if_exists=if_exists, # type: ignore[arg-type] # Drops and recreates the table if it exists
         index=False                 # Prevents pandas index from becoming a column
     )
 
 
 def execute_sql_query(
     query: str
-) -> list[dict] | str:
+) -> list[dict[str, object]] | str:
     """
     Execute a SQL query against the PostgreSQL database and return the results.
 
@@ -54,7 +57,7 @@ def execute_sql_query(
         # Execute the query
         cur.execute(query)
         # Fetch all results
-        columns = [desc[0] for desc in cur.description]
+        columns = [desc[0] for desc in cur.description]  # type: ignore[union-attr]
         results = cur.fetchall()
         # Close communication with the database
         cur.close()

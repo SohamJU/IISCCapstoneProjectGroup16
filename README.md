@@ -46,7 +46,7 @@ See [PREPROCESSING.md](PREPROCESSING.md) for setup, outputs, and run commands.
 
 ## Synthetic Data Pipeline
 
-To build a robust, perfectly-relational database for agent testing, the project includes a massive 13-step synthetic data generation pipeline (`notebooks/02_run_synthetic_data_pipeline.py`).
+To build a robust, perfectly-relational database for agent testing, the project includes a massive 13-step synthetic data generation pipeline (`pipelines/02_run_synthetic_data_pipeline.py`).
 
 This pipeline handles:
 1. **Downloading** real Amazon 2023 product and review data.

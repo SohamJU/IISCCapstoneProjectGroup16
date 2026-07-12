@@ -6,6 +6,7 @@ import html
 import math
 import re
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -34,7 +35,7 @@ PRODUCT_TEXT_CANDIDATES = [
 
 
 def clean_text(
-    text: object,
+    text: Any,
     *,
     remove_urls: bool = True,
     remove_leading_mentions: bool = False,
@@ -224,7 +225,7 @@ def build_conversation_history(
 
     for conversation_id, group in ordered.groupby("conversation_id", sort=False):
         turns = [
-            f"{row.speaker_type}: {row.text}"
+            f"{row.speaker_type}: {row.text}"  # type: ignore
             for row in group.itertuples(index=False)
             if row.text
         ]
@@ -323,7 +324,7 @@ def _first_existing_column(df: pd.DataFrame, candidates: list[str]) -> str | Non
     return None
 
 
-def _normalize_identifier(value: object) -> str:
+def _normalize_identifier(value: Any) -> str:
     """Normalize ids so `123`, `123.0`, and numeric strings resolve the same way."""
 
     if value is None:

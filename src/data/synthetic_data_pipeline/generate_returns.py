@@ -19,6 +19,7 @@ import random
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
@@ -52,7 +53,7 @@ RETURN_STATUSES = ["approved", "pending", "rejected", "refunded"]
 RETURN_STATUS_WEIGHTS = [0.60, 0.20, 0.10, 0.10]
 
 
-def _pick_weighted(options: list, weights: list):
+def _pick_weighted(options: list[Any], weights: list[float]) -> Any:
     return random.choices(options, weights=weights, k=1)[0]
 
 
@@ -100,7 +101,7 @@ def generate_returns(
     # Sample delivered orders for returns
     sampled_orders = delivered.sample(n=actual_count, random_state=seed)
 
-    rows: list[dict] = []
+    rows: list[dict[str, Any]] = []
     for idx, (_, order) in enumerate(sampled_orders.iterrows(), start=1):
         oid = order["order_id"]
         cid = order["customer_id"]

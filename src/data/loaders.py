@@ -4,7 +4,7 @@ import pandas as pd
 from src.config.data import AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
-def load_electronics_reviews():
+def load_electronics_reviews() -> pd.DataFrame:
     """
     Load Amazon Electronics ratings dataset.
 

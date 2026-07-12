@@ -23,6 +23,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
+from typing import Any
 from faker import Faker
 
 from src.config.data import (
@@ -44,7 +45,7 @@ LANGUAGES = ["en", "es", "fr"]
 LANGUAGE_WEIGHTS = [0.95, 0.03, 0.02]
 
 
-def _pick_weighted(options: list, weights: list) -> str:
+def _pick_weighted(options: list[str], weights: list[float]) -> str:
     return random.choices(options, weights=weights, k=1)[0]
 
 
@@ -110,7 +111,7 @@ def generate_customers(
         )
 
     print(f"  Generating {len(top_users):,} customer profiles …")
-    rows = []
+    rows: list[dict[str, Any]] = []
     for user_id in top_users:
         pref_cats = _infer_preferred_categories(user_id, reviews, catalog)
         rows.append(

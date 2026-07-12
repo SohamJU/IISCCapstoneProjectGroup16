@@ -28,21 +28,15 @@ from pathlib import Path
 # Fix unicode encode errors on Windows
 if sys.stdout.encoding.lower() != 'utf-8':
     try:
-        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[union-attr]
     except AttributeError:
         pass
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 
 from src.config.data import (
     AMAZON_2023_MAX_REVIEWS,
     CUSTOMERS_PATH,
-    CUSTOMER_QUERIES_PATH,
-    KNOWLEDGE_BASE_DIR,
     NUM_CUSTOMERS,
     NUM_ORDERS,
     NUM_RETURNS,
@@ -52,6 +46,8 @@ from src.config.data import (
     RETURNS_PATH,
     REVIEWS_PROCESSED_PATH,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -63,7 +59,7 @@ def step_01_download(force: bool, max_reviews: int, streaming: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 1: Download Amazon Reviews 2023")
     print("=" * 70)
-    from src.data.pipeline.download_amazon_2023 import download_all
+    from src.data.synthetic_data_pipeline.download_amazon_2023 import download_all
 
     download_all(max_reviews=max_reviews, streaming=streaming, force=force)
 
@@ -73,7 +69,7 @@ def step_02_preprocess_products(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 2: Preprocess Product Catalog")
     print("=" * 70)
-    from src.data.pipeline.preprocess_products import run
+    from src.data.synthetic_data_pipeline.preprocess_products import run
 
     run(force=force)
 
@@ -83,7 +79,7 @@ def step_03_preprocess_reviews(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 3: Preprocess Reviews")
     print("=" * 70)
-    from src.data.pipeline.preprocess_reviews import run
+    from src.data.synthetic_data_pipeline.preprocess_reviews import run
 
     run(force=force)
 
@@ -93,7 +89,7 @@ def step_04_kaggle_check(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 4: Kaggle Compatibility Check")
     print("=" * 70)
-    from src.data.pipeline.check_kaggle_compatibility import run
+    from src.data.synthetic_data_pipeline.check_kaggle_compatibility import run
 
     run(force=force)
 
@@ -103,7 +99,7 @@ def step_05_generate_customers(force: bool, num_customers: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 5: Generate Customer Profiles")
     print("=" * 70)
-    from src.data.pipeline.generate_customers import run
+    from src.data.synthetic_data_pipeline.generate_customers import run
 
     run(num_customers=num_customers, force=force)
 
@@ -113,7 +109,7 @@ def step_06_generate_orders(force: bool, num_orders: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 6: Generate Orders + Order Items")
     print("=" * 70)
-    from src.data.pipeline.generate_orders import run
+    from src.data.synthetic_data_pipeline.generate_orders import run
 
     run(num_orders=num_orders, force=force)
 
@@ -123,17 +119,17 @@ def step_07_generate_returns(force: bool, num_returns: int) -> None:
     print("\n" + "=" * 70)
     print("STEP 7: Generate Returns")
     print("=" * 70)
-    from src.data.pipeline.generate_returns import run
+    from src.data.synthetic_data_pipeline.generate_returns import run
 
     run(num_returns=num_returns, force=force)
 
 
 def step_08_generate_queries(force: bool, total_queries: int) -> None:
-    """Step 8: Generate enhanced synthetic queries."""
+    """Step 8: Generate combined synthetic queries."""
     print("\n" + "=" * 70)
-    print("STEP 8: Generate Enhanced Queries")
+    print("STEP 8: Generate Combined Synthetic Queries")
     print("=" * 70)
-    from src.data.pipeline.enhanced_query_generator import run
+    from src.data.synthetic_data_pipeline.enhanced_query_generator import run
 
     run(total_queries=total_queries, force=force)
 
@@ -143,7 +139,7 @@ def step_09_generate_policies(force: bool, provider: str) -> None:
     print("\n" + "=" * 70)
     print("STEP 9: Generate Policy Documents")
     print("=" * 70)
-    from src.data.pipeline.generate_policies import run
+    from src.data.synthetic_data_pipeline.generate_policies import run
 
     run(provider=provider, force=force)
 
@@ -161,8 +157,8 @@ def step_11_generate_schemas(force: bool) -> None:
     print("\n" + "=" * 70)
     print("STEP 11: Generate Schemas")
     print("=" * 70)
-    from src.data.pipeline.generate_schemas import run
-    
+    from src.data.synthetic_data_pipeline.generate_schemas import run
+
     run(force=force)
 
 
@@ -171,8 +167,8 @@ def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
     print("\n" + "=" * 70)
     print("STEP 12: Upload to PostgreSQL")
     print("=" * 70)
-    from src.data.pipeline.upload_postgres import run
-    
+    from src.data.synthetic_data_pipeline.upload_postgres import run
+
     run(force=force, behavior=behavior)
 
 def step_13_test_postgres() -> None:
@@ -180,8 +176,8 @@ def step_13_test_postgres() -> None:
     print("\n" + "=" * 70)
     print("STEP 13: Test PostgreSQL Upload")
     print("=" * 70)
-    from src.data.pipeline.test_postgres import run
-    
+    from src.data.synthetic_data_pipeline.test_postgres import run
+
     run()
 
 
@@ -190,7 +186,7 @@ def step_13_test_postgres() -> None:
 # INTEGRITY VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
 
-def _run_validation() -> None:
+def _run_validation() -> None:  # noqa: C901
     """Run all 13 integrity checks from the plan."""
     checks_passed = 0
     checks_failed = 0
@@ -249,7 +245,11 @@ def _run_validation() -> None:
     _check("C3: Kaggle compatibility report exists", report_path.exists())
 
     # ── Check 4-6: FK integrity ─────────────────────────────────────────
-    if ORDERS_PATH.exists() and CUSTOMERS_PATH.exists() and PRODUCT_CATALOG_PATH.exists():
+    if (
+        ORDERS_PATH.exists()
+        and CUSTOMERS_PATH.exists()
+        and PRODUCT_CATALOG_PATH.exists()
+    ):
         orders = pd.read_csv(ORDERS_PATH)
         customers = pd.read_csv(CUSTOMERS_PATH, usecols=["customer_id"])
         catalog = pd.read_csv(PRODUCT_CATALOG_PATH, usecols=["product_id"])
@@ -301,7 +301,8 @@ def _run_validation() -> None:
 
         # C8: return.product_id matches an item in that order
         ret_items = returns.merge(
-            items[["order_id", "product_id"]].rename(columns={"product_id": "item_pid"}),
+            items[["order_id", "product_id"]]
+            .rename(columns={"product_id": "item_pid"}),
             on="order_id",
             how="left",
         )
@@ -415,12 +416,25 @@ def _run_validation() -> None:
     else:
         _skip("C12: order total check", "required files missing")
 
-    # ── Check 13: synthetic_generator.py unmodified ────────────────────
-    orig_path = Path(PROJECT_ROOT) / "src" / "data" / "synthetic_generator.py"
+    # ── Check 13: query generator modules exist ─────────────────────────
+    generic_path = (
+        Path(PROJECT_ROOT)
+        / "src"
+        / "data"
+        / "synthetic_data_pipeline"
+        / "generic_query_generator.py"
+    )
+    enhanced_path = (
+        Path(PROJECT_ROOT)
+        / "src"
+        / "data"
+        / "synthetic_data_pipeline"
+        / "enhanced_query_generator.py"
+    )
     _check(
-        "C13: synthetic_generator.py exists (frozen)",
-        orig_path.exists(),
-        "File missing or deleted",
+        "C13: query generator modules exist",
+        generic_path.exists() and enhanced_path.exists(),
+        "Missing generic_query_generator.py or enhanced_query_generator.py",
     )
 
     # ── Summary ────────────────────────────────────────────────────────
@@ -459,15 +473,28 @@ def parse_args() -> argparse.Namespace:
         default=AMAZON_2023_MAX_REVIEWS,
         help="Max reviews per category for download.",
     )
-    parser.add_argument("--streaming", action="store_true", help="Use streaming download.")
     parser.add_argument(
-        "--num-customers", type=int, default=NUM_CUSTOMERS, help="Target customer count."
+        "--streaming",
+        action="store_true",
+        help="Use streaming download.",
     )
     parser.add_argument(
-        "--num-orders", type=int, default=NUM_ORDERS, help="Target order count."
+        "--num-customers",
+        type=int,
+        default=NUM_CUSTOMERS,
+        help="Target customer count.",
     )
     parser.add_argument(
-        "--num-returns", type=int, default=NUM_RETURNS, help="Target return count."
+        "--num-orders",
+        type=int,
+        default=NUM_ORDERS,
+        help="Target order count.",
+    )
+    parser.add_argument(
+        "--num-returns",
+        type=int,
+        default=NUM_RETURNS,
+        help="Target return count.",
     )
     parser.add_argument(
         "--total-queries", type=int, default=500, help="Number of enhanced queries."

@@ -32,6 +32,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
+from typing import Any
 from faker import Faker
 
 from src.config.data import (
@@ -72,7 +73,7 @@ def _random_tracking() -> str:
     return "TRK-" + "".join(random.choices(string.ascii_uppercase + string.digits, k=12))
 
 
-def _pick_weighted(options: list, weights: list):
+def _pick_weighted(options: list[Any], weights: list[float]) -> Any:
     return random.choices(options, weights=weights, k=1)[0]
 
 
@@ -81,7 +82,7 @@ def _build_order_record(
     customer_id: str,
     status: str,
     order_date: pd.Timestamp,
-) -> dict:
+ ) -> dict[str, Any]:
     """Build a single order row with consistent business rules."""
     est_delivery = order_date + timedelta(days=random.randint(3, 10))
     has_delivered = status in ("delivered", "returned")
@@ -117,7 +118,7 @@ def _build_order_item(
     product_id: str,
     unit_price: float,
     status: str,
-) -> dict:
+ ) -> dict[str, Any]:
     """Build a single order item row."""
     quantity = _pick_weighted(QUANTITY_OPTIONS, QUANTITY_WEIGHTS)
     return {
@@ -175,8 +176,8 @@ def generate_orders(
     review_pairs = review_pairs.drop_duplicates(subset=["user_id", "product_id"])
     print(f"  Phase A: {len(review_pairs):,} review-backed (user, product) pairs")
 
-    orders_rows: list[dict] = []
-    items_rows: list[dict] = []
+    orders_rows: list[dict[str, Any]] = []
+    items_rows: list[dict[str, Any]] = []
     order_counter = 1
     item_counter = 1
 
@@ -193,7 +194,7 @@ def generate_orders(
                 raise ValueError
             order_date = review_ts - timedelta(days=random.randint(1, 30))
         except (ValueError, TypeError):
-            order_date = fake.date_time_between(start_date="-2y", end_date="-30d")
+            order_date = fake.date_time_between(start_date="-2y", end_date="-30d") # type: ignore[assignment]
             order_date = pd.Timestamp(order_date)
 
         order_rec = _build_order_record(oid, uid, "delivered", order_date)

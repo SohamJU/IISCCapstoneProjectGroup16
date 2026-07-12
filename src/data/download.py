@@ -1,12 +1,12 @@
 """Dataset downloading utilities."""
 
-import kagglehub
+import kagglehub  # type: ignore[import-untyped]
 import shutil
-import pathlib
+from pathlib import Path
 from src.config.data import AMAZON_KAGGLE_DATASET, AMAZON_RAW_DATA_DIR, AMAZON_RAW_DATA_FILENAME
 
 
-def download_electronics_reviews(force_download: bool = False):
+def download_electronics_reviews(force_download: bool = False) -> Path:
     """Download Amazon Electronics ratings dataset from Kaggle.
 
     Downloads the dataset to the configured raw data directory and renames the
@@ -32,11 +32,14 @@ def download_electronics_reviews(force_download: bool = False):
     print(f"Dataset downloaded to {download_path}")
     
     # Copy downloaded csv (with any name) to the target filename
-    download_dir = pathlib.Path(download_path)
+    download_dir = Path(download_path)
     downloaded_file = next((f for f in download_dir.iterdir() if f.is_file() and f.suffix == ".csv"), None)
     if downloaded_file:
         shutil.copy2(downloaded_file, target_filepath)
         print(f"Dataset copied to {target_filepath}")
+        return target_filepath
+    # If we reached here, no csv was found in the downloaded directory
+    raise FileNotFoundError(f"No .csv file found in downloaded dataset at {download_dir}")
 
 
 if __name__ == "__main__":
