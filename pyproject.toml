@@ -13,6 +13,13 @@ dependencies = [
     "datasets>=3.5.0",
     "faker>=37.0.0",
     "dataset>=2.0.0",
-    "pandas-stubs>=3.0.3.260530",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
     "ruff>=0.15.20",
+    "mypy>=1.7.0",
+    "pandas-stubs>=3.0.3.260530",
 ]
