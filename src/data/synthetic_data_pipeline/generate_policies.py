@@ -19,6 +19,7 @@ Usage:
 
 from __future__ import annotations
 
+from typing import Any, cast
 import argparse
 import os
 import sys
@@ -550,12 +551,12 @@ def _call_gemini(prompt: str) -> str | None:
         return None
 
     try:
-        import google.generativeai as genai
+        import google.generativeai as genai  # type: ignore[import-untyped]
 
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt)
-        return response.text
+        response: Any = model.generate_content(prompt)
+        return cast(str, response.text)
     except ImportError:
         print("  ⚠ google-generativeai package not installed. pip install google-generativeai")
         return None
@@ -575,7 +576,7 @@ def _call_openai(prompt: str) -> str | None:
         from openai import OpenAI
 
         client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
+        response: Any = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a technical writer creating e-commerce policy documents."},
@@ -584,7 +585,8 @@ def _call_openai(prompt: str) -> str | None:
             max_tokens=4096,
             temperature=0.7,
         )
-        return response.choices[0].message.content
+        # response.choices[0].message.content is untyped from the OpenAI package
+        return cast(str, response.choices[0].message.content)
     except ImportError:
         print("  ⚠ openai package not installed. pip install openai")
         return None

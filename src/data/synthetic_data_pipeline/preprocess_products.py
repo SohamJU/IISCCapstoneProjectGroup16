@@ -13,6 +13,7 @@ import ast
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
@@ -27,7 +28,7 @@ from src.config.data import (
 )
 
 
-def _safe_parse_price(val) -> float | None:
+def _safe_parse_price(val: Any) -> float | None:
     """Parse price from various formats to float, returning None on failure."""
     if val is None or val == "" or val == "None":
         return None
@@ -48,7 +49,7 @@ def _safe_parse_price(val) -> float | None:
         return None
 
 
-def _flatten_list_field(val) -> str:
+def _flatten_list_field(val: Any) -> str:
     """Convert a list field to a semicolon-separated string."""
     if val is None:
         return ""
@@ -66,7 +67,7 @@ def _flatten_list_field(val) -> str:
     return str(val).strip()
 
 
-def _flatten_description(val) -> str:
+def _flatten_description(val: Any) -> str:
     """Convert description field (often a list of paragraphs) to single text."""
     if val is None:
         return ""
@@ -75,7 +76,7 @@ def _flatten_description(val) -> str:
     return str(val).strip()
 
 
-def _extract_bestseller(details) -> bool:
+def _extract_bestseller(details: Any) -> bool:
     """Try to extract best-seller flag from the details field."""
     if details is None:
         return False
@@ -95,7 +96,7 @@ def _extract_bestseller(details) -> bool:
     return False
 
 
-def _flatten_bought_together(val) -> str:
+def _flatten_bought_together(val: Any) -> str:
     """Convert bought_together field to comma-separated ASINs."""
     if val is None:
         return ""
@@ -104,7 +105,7 @@ def _flatten_bought_together(val) -> str:
     return str(val).strip()
 
 
-def _flatten_categories(val) -> str:
+def _flatten_categories(val: Any) -> str:
     """Convert categories list to pipe-separated string."""
     if val is None:
         return ""

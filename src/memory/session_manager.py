@@ -24,7 +24,7 @@ class SessionManager:
         *,
         role: str,
         text: str,
-        metadata: dict | None = None,
+        metadata: dict[str, object] | None = None,
     ) -> ConversationMemory:
         """Append a turn to a session and return the session memory."""
 

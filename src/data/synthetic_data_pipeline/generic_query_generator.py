@@ -1,34 +1,12 @@
-"""Enhanced Synthetic Customer Query Generator.
-
-This is a COPY of src/data/synthetic_generator.py with enhancements:
-  - Product names sampled from the real product catalog
-  - Real order IDs injected into order-related queries
-  - Additional intents: loyalty_inquiry, account_update, shipping_estimate
-  - Default volume increased to 500 queries
-
-The original src/data/synthetic_generator.py is FROZEN and not modified.
-
-Usage:
-    python -m src.data.pipeline.enhanced_query_generator
-    python -m src.data.pipeline.enhanced_query_generator --total 1000
-"""
-
 import random
-import sys
 from pathlib import Path
 from datetime import datetime
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 import pandas as pd
 
-from src.config.data import (
-    CUSTOMER_QUERIES_PATH,
-    ORDERS_PATH,
-    PRODUCT_CATALOG_PATH,
-)
+from src.config.data import CUSTOMER_QUERIES_PATH
+
+GENERIC_CUSTOMER_QUERIES_PATH = CUSTOMER_QUERIES_PATH.parent / "customer_queries_generic.csv"
 
 
 # -----------------------------------------------------------------------------
@@ -49,30 +27,26 @@ INTENT_VOCAB = {
     "discounts_offers": ["promo code not working", "apply coupon", "any active discounts"],
     "complaints": ["terrible service", "very disappointed", "unacceptable quality"],
     "delivery_issues": ["package stolen", "delivered to wrong house", "delayed shipment"],
-    # ── New intents ──
-    "loyalty_inquiry": ["check loyalty points", "what tier am I", "loyalty rewards balance"],
-    "account_update": ["update my email", "change phone number", "update shipping address"],
-    "shipping_estimate": ["how long will shipping take", "estimated delivery time", "when will it arrive"],
 }
 
 ALL_INTENTS = list(INTENT_VOCAB.keys())
 
 # -----------------------------------------------------------------------------
-# FALLBACK PRODUCTS (used if catalog is not available)
+# DOMAIN VOCAB
 # -----------------------------------------------------------------------------
-FALLBACK_PRODUCTS = [
+PRODUCTS = [
     "Bluetooth speaker", "wireless headphones", "laptop charger",
     "smartphone case", "USB cable", "monitor", "keyboard", "mouse",
-    "webcam", "microphone",
+    "webcam", "microphone"
 ]
 
 PROBLEMS = [
     "broken", "not working", "defective", "missing parts",
-    "wrong item", "poor quality", "scratched", "damaged",
+    "wrong item", "poor quality", "scratched", "damaged"
 ]
 
 TIME_MARKERS = [
-    "yesterday", "2 days ago", "last week", "just now", "today",
+    "yesterday", "2 days ago", "last week", "just now", "today"
 ]
 
 # -----------------------------------------------------------------------------
@@ -90,43 +64,24 @@ TYPOS = {
 FILLERS = ["pls help", "need support", "urgent", "help asap", "??", "!!!", ""]
 
 TRANSITIONS = [
-    ". Also, ", ". Another thing, I also need to ", " and ", " as well as ", ". Can you also help me ",
+    ". Also, ", ". Another thing, I also need to ", " and ", " as well as ", ". Can you also help me "
 ]
-
-
-def _load_real_products() -> list[str]:
-    """Load product titles from the real catalog, fallback to hardcoded list."""
-    if PRODUCT_CATALOG_PATH.exists():
-        try:
-            catalog = pd.read_csv(PRODUCT_CATALOG_PATH, usecols=["title"])
-            titles = catalog["title"].dropna().tolist()
-            if len(titles) > 0:
-                # Sample up to 200 to keep variety manageable
-                return random.sample(titles, min(200, len(titles)))
-        except Exception:
-            pass
-    return FALLBACK_PRODUCTS
-
-
-def _load_real_order_ids() -> list[str]:
-    """Load order IDs from the generated orders, return empty list if unavailable."""
-    if ORDERS_PATH.exists():
-        try:
-            orders = pd.read_csv(ORDERS_PATH, usecols=["order_id"])
-            return orders["order_id"].tolist()
-        except Exception:
-            pass
-    return []
 
 
 # -----------------------------------------------------------------------------
 # CORE STYLE FUNCTIONS
 # -----------------------------------------------------------------------------
-def build_query(product, problem, persona, time_marker, intent_set, order_ids):
-    """Builds single or multi-sentence queries organically matching intents and personas."""
+
+def build_query(
+    product: str,
+    problem: str,
+    persona: str,
+    time_marker: str,
+    intent_set: list[str],
+) -> str:
+    """Build a synthetic query using generic product and persona patterns."""
     sentences = []
 
-    # 1. Greetings & Context Setup
     if persona == "polite":
         sentences.append(random.choice(["Hi there!", "Hello, hope you are doing well.", "Good day."]))
     elif persona == "confused":
@@ -134,24 +89,17 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids):
     elif persona == "angry":
         sentences.append(random.choice(["This is unacceptable.", "I am highly annoyed.", "Unbelievable service."]))
 
-    # 2. Primary Intent Execution
     intent_1 = intent_set[0]
     action_phrase_1 = random.choice(INTENT_VOCAB[intent_1])
 
-    # Inject real order IDs for order-related intents
-    order_ref = ""
-    if intent_1 in ("order_tracking", "order_modification", "order_cancellation") and order_ids:
-        order_ref = f" (order {random.choice(order_ids)})"
-
     core_templates = [
-        f"I am {action_phrase_1} the {product}{order_ref}.",
-        f"Regarding the {product} I got {time_marker}, it is {problem} and I need to {action_phrase_1} it{order_ref}.",
-        f"Can you help with my {product}? It's {problem} and I am looking to {action_phrase_1}{order_ref}.",
-        f"My {product} is {problem}. How do I handle {action_phrase_1}?{order_ref}",
+        f"I am {action_phrase_1} the {product}.",
+        f"Regarding the {product} I got {time_marker}, it is {problem} and I need to {action_phrase_1} it.",
+        f"Can you help with my {product}? It's {problem} and I am looking to {action_phrase_1}.",
+        f"My {product} is {problem}. How do I handle {action_phrase_1}?"
     ]
     primary_clause = random.choice(core_templates)
 
-    # 3. Secondary Intent Handling (Multi-Intent Mixing)
     if len(intent_set) > 1:
         intent_2 = intent_set[1]
         action_phrase_2 = random.choice(INTENT_VOCAB[intent_2])
@@ -166,7 +114,6 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids):
     else:
         sentences.append(primary_clause)
 
-    # 4. Closings & Sign-offs
     if persona in ["frustrated", "impatient", "angry"]:
         sentences.append(random.choice(["Please resolve this immediately.", "Let me know ASAP!", "Waiting for your prompt response."]))
     elif persona == "polite":
@@ -174,7 +121,6 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids):
     elif persona == "confused":
         sentences.append(random.choice(["Can you walk me through this step by step?", "What should my next step be?"]))
 
-    # 5. Persona Structural Shifts
     if persona == "impatient":
         query = " ".join(sentences[1:2]) if len(sentences) > 1 else sentences[0]
     else:
@@ -184,7 +130,6 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids):
     if persona == "angry" and random.random() < 0.4:
         query = query.upper()
 
-    # 6. Noise & Typo Injections
     if random.random() < 0.25:
         query += " " + random.choice(FILLERS)
 
@@ -199,38 +144,30 @@ def build_query(product, problem, persona, time_marker, intent_set, order_ids):
 # -----------------------------------------------------------------------------
 # MULTI-INTENT MIXER
 # -----------------------------------------------------------------------------
-def sample_intents():
+
+def sample_intents() -> list[str]:
     """65% single intent, 35% multi-intent."""
     if random.random() < 0.65:
         return [random.choice(ALL_INTENTS)]
-    else:
-        return random.sample(ALL_INTENTS, k=2)
+    return random.sample(ALL_INTENTS, k=2)
 
 
 # -----------------------------------------------------------------------------
 # MAIN GENERATOR
 # -----------------------------------------------------------------------------
-def generate_enhanced_queries(total_queries: int = 500, seed: int = 42) -> pd.DataFrame:
-    """Generate enhanced synthetic customer queries.
 
-    Links to real product names and order IDs when available.
-    """
+def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.DataFrame:
     random.seed(seed)
-
-    products = _load_real_products()
-    order_ids = _load_real_order_ids()
-
-    print(f"  Using {len(products)} product names, {len(order_ids)} order IDs")
-
     rows = []
+
     for _ in range(total_queries):
         intents = sample_intents()
-        product = random.choice(products)
+        product = random.choice(PRODUCTS)
         problem = random.choice(PROBLEMS)
         persona = random.choice(PERSONAS)
         time_marker = random.choice(TIME_MARKERS)
 
-        query = build_query(product, problem, persona, time_marker, intents, order_ids)
+        query = build_query(product, problem, persona, time_marker, intents)
 
         rows.append({
             "query": query,
@@ -242,29 +179,28 @@ def generate_enhanced_queries(total_queries: int = 500, seed: int = 42) -> pd.Da
 
     df = pd.DataFrame(rows)
     df = df.drop_duplicates(subset=["query"]).reset_index(drop=True)
-    print(f"  Generated {len(df):,} unique queries")
     return df
 
 
 # -----------------------------------------------------------------------------
 # SAVE FUNCTION
 # -----------------------------------------------------------------------------
-def save_enhanced_queries(df: pd.DataFrame) -> Path:
-    """Save enhanced queries to the configured path."""
-    CUSTOMER_QUERIES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(CUSTOMER_QUERIES_PATH, index=False)
-    print(f"  ✅ Saved queries → {CUSTOMER_QUERIES_PATH.name} ({len(df):,} rows)")
-    return CUSTOMER_QUERIES_PATH
+
+def save_synthetic_queries(df: pd.DataFrame, path: Path | None = None) -> Path:
+    destination = path or GENERIC_CUSTOMER_QUERIES_PATH
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(destination, index=False)
+    print(f"  ✅ Saved generic queries → {destination.name} ({len(df):,} rows)")
+    return destination
 
 
-def run(total_queries: int = 500, force: bool = False) -> pd.DataFrame:
-    """Generate and save enhanced queries."""
-    if CUSTOMER_QUERIES_PATH.exists() and not force:
-        print(f"  [skip] Queries already exist: {CUSTOMER_QUERIES_PATH.name}")
-        return pd.read_csv(CUSTOMER_QUERIES_PATH)
+def run(total_queries: int = 50, force: bool = False) -> pd.DataFrame:
+    if GENERIC_CUSTOMER_QUERIES_PATH.exists() and not force:
+        print(f"  [skip] Generic queries already exist: {GENERIC_CUSTOMER_QUERIES_PATH.name}")
+        return pd.read_csv(GENERIC_CUSTOMER_QUERIES_PATH)
 
-    df = generate_enhanced_queries(total_queries=total_queries)
-    save_enhanced_queries(df)
+    df = generate_synthetic_queries(total_queries=total_queries)
+    save_synthetic_queries(df)
     return df
 
 
@@ -274,8 +210,9 @@ def run(total_queries: int = 500, force: bool = False) -> pd.DataFrame:
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Generate enhanced synthetic queries.")
-    parser.add_argument("--total", type=int, default=500, help="Number of queries.")
+    parser = argparse.ArgumentParser(description="Generate generic synthetic queries.")
+    parser.add_argument("--total", type=int, default=50, help="Number of generic queries to generate.")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
+
     run(total_queries=args.total, force=args.force)
