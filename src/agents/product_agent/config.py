@@ -18,3 +18,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PRODUCT_SCHEMA_PATH = (
     PROJECT_ROOT / "data" / "processed" / "product_catalog.schema.json"
 )
+
+# ── Search / Retrieval ────────────────────────────────────────────────────
+BM25_TOP_K = 15          # candidates retrieved from BM25 index
+VECTOR_TOP_K = 15        # candidates retrieved from vector store
+HYBRID_FINAL_TOP_K = 5   # final results returned to the agent after RRF fusion

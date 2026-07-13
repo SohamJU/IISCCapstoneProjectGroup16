@@ -28,7 +28,7 @@ from src.agents.product_agent.config import (
     USE_TWITTER_SAMPLES,
 )
 from src.agents.product_agent.prompts import build_system_prompt
-from src.agents.product_agent.tools import get_twitter_samples, query_products
+from src.agents.product_agent.tools import get_twitter_samples, query_products, search_products
 
 
 class ProductRecommendationAgent:
@@ -62,8 +62,10 @@ class ProductRecommendationAgent:
         # Load schema
         self.schema = self._load_schema()
 
-        # Build tool list — conditionally include twitter tool
-        self._tools = [query_products]
+        # Build tool list — search_products is the primary tool
+        # query_products is kept for exact structured lookups
+        # get_twitter_samples is a stub kept for demo purposes
+        self._tools = [search_products, query_products]
         if self.use_twitter_samples:
             self._tools.append(get_twitter_samples)
 

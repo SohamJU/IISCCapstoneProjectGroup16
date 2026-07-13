@@ -19,6 +19,11 @@ dependencies = [
     "openai",
     "faker",
     "google-genai",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=3.0.0",
+    "pinecone>=5.0.0",
+    "tqdm>=4.68.3",
+    "numpy>=2.5.0",
 ]
 
 [project.optional-dependencies]
