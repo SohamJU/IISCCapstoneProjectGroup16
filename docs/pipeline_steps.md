@@ -55,6 +55,11 @@ This document outlines the steps required to set up the project environment and 
      # POSTGRESQL_PORT=12548
      # POSTGRESQL_USER=avnadmin
      # POSTGRESQL_DB=defaultdb
+
+ - More Info:
+    Add Extenstion for Postgressql (Microsoft) - Elephant Icon
+    Go to Parameters Tab and Add the details above. 
+    Go to Advanced and Don't forget to Add Port there
      ```
 
 ### VS Code Configuration
@@ -118,13 +123,14 @@ The details are available in the file 'docs/individual_pipeline_docs/01_amazon_d
 To execute the entire pipeline end-to-end:
 ```bash
 python notebooks/02_run_synthetic_data_pipeline.py
+If above fails due to src pathing, try python -m pipelines.02_run_synthetic_data_pipeline
 ```
 
 ### Notes on query generation
 Step 8 now runs both the generic query generator and the enhanced query generator, then merges their outputs into a single `data/synthetic/customer_queries.csv` file.
 
 ### Force a Complete Re-run
-To ignore completed steps, overwrite all existing data, and start fresh from Step 1:
+CAUTION : To IGNORE completed steps, OVERWRITE all existing data, and start fresh from Step 1:
 ```bash
 python pipelines/02_run_synthetic_data_pipeline.py --force
 ```
