@@ -21,7 +21,9 @@ _WRITE_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-_MAX_RESULT_ROWS = 5  # truncate large result sets for token budget (limit to 5 to prevent 413 error)
+_MAX_RESULT_ROWS = 5  
+# truncate large result sets for token budget 
+# (limit to 5 to prevent 413 error)
 
 
 @tool
