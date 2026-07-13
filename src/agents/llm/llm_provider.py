@@ -10,6 +10,7 @@ import os
 
 from langchain_openai import ChatOpenAI
 from langchain_core.rate_limiters import InMemoryRateLimiter
+from pydantic import SecretStr
 
 
 # ── Defaults ──────────────────────────────────────────────────────────────
@@ -70,8 +71,8 @@ def get_llm(
     return ChatOpenAI(
         model=model,
         temperature=temperature,
-        max_tokens=max_tokens,
-        api_key=api_key,
+        max_tokens=max_tokens,  # type: ignore[call-arg]
+        api_key=SecretStr(api_key),
         base_url=base_url,
         max_retries=_DEFAULT_MAX_RETRIES,
         rate_limiter=rate_limiter,

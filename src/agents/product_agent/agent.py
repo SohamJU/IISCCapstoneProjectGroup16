@@ -15,9 +15,10 @@ Usage::
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.messages import HumanMessage
+from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
@@ -102,7 +103,7 @@ class ProductRecommendationAgent:
         str
             The agent's final answer or a clarification question.
         """
-        config = {
+        config: RunnableConfig = {
             "configurable": {"thread_id": self.session_id},
             "recursion_limit": self.max_iterations * 2,
         }
@@ -120,8 +121,8 @@ class ProductRecommendationAgent:
                     last_msg = msgs[-1]
                     last_msg.pretty_print()
                     final_content = last_msg.content
-            print(f"{'='*20} DEBUG: Agent Execution Finished {'='*20}\\n")
-            return final_content
+            print(f"{'='*20} DEBUG: Agent Execution Finished {'='*20}\n")
+            return str(final_content)
         else:
             result = self._agent.invoke(
                 {"messages": [HumanMessage(content=user_message)]},
@@ -131,7 +132,7 @@ class ProductRecommendationAgent:
             # Extract the last AI message from the result
             messages = result.get("messages", [])
             if messages:
-                return messages[-1].content
+                return str(messages[-1].content)
             return "I wasn't able to generate a response. Please try again."
 
     def reset_memory(self) -> None:
@@ -156,4 +157,4 @@ class ProductRecommendationAgent:
         if not PRODUCT_SCHEMA_PATH.exists():
             return {"columns": [], "_note": "Schema file not found"}
         with open(PRODUCT_SCHEMA_PATH, "r", encoding="utf-8") as fh:
-            return json.load(fh)
+            return cast(dict[str, Any], json.load(fh))
