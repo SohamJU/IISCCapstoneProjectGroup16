@@ -13,9 +13,13 @@ dependencies = [
     "datasets>=3.5.0",
     "faker>=37.0.0",
     "dataset>=2.0.0",
+    "langchain-openai>=0.3.0",
+    "langchain-core>=0.3.0",
+    "langgraph>=1.2.0",
     "openai",
     "faker",
     "google-genai",
+    "ipykernel>=7.3.0",
 ]
 
 [project.optional-dependencies]

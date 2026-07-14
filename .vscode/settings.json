@@ -7,6 +7,16 @@
     "python.linting.ruffEnabled": true,
     "python.linting.ruffPath": ".venv/Scripts/ruff.exe",
     "python.linting.ruffArgs": ["--config", ".ruff.toml"],
+    "ruff.enabled": true,
+    "ruff.importStrategy": "fromEnvironment",
+    "ruff.lint.run": "onType",
+    "editor.codeActionsOnSave": {
+        "source.fixAll.ruff": "explicit",
+        "source.organizeImports.ruff": "explicit"
+    },
+    "[python]": {
+        "editor.formatOnSave": true
+    },
     "python.analysis.diagnosticSeverityOverrides": {
         "reportGeneralTypeIssues": "warning"
     }
