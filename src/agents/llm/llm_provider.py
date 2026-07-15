@@ -8,9 +8,6 @@ from __future__ import annotations
 
 import os
 
-from langchain_openai import ChatOpenAI
-from langchain_core.rate_limiters import InMemoryRateLimiter
-
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 _DEFAULT_MODEL = "openai/gpt-oss-120b"
@@ -30,7 +27,7 @@ def get_llm(
     temperature: float = _DEFAULT_TEMPERATURE,
     max_tokens: int = _DEFAULT_MAX_TOKENS,
     base_url: str = _DEFAULT_BASE_URL,
-) -> ChatOpenAI:
+):
     """Return a rate-limited ChatOpenAI instance pointing at Groq.
 
     Parameters
@@ -54,6 +51,14 @@ def get_llm(
     ValueError
         If the ``GROQ_API_KEY`` environment variable is not set.
     """
+    try:
+        from langchain_openai import ChatOpenAI
+        from langchain_core.rate_limiters import InMemoryRateLimiter
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise ImportError(
+            "langchain-openai is required to create the shared LLM client."
+        ) from exc
+
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError(
