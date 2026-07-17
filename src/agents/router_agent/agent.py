@@ -40,7 +40,7 @@ class RouterAgent:
         self,
         session_id: str = "default",
         default_agent: str = "product",
-        llm: Optional[Any] = None,
+        llm: Optional[Any] = get_llm(),
         use_llm_fallback: bool = True,
         debug: bool = False,
     ) -> None:
