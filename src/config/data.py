@@ -3,8 +3,10 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+from src.data import postgresql
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -32,7 +34,6 @@ POSTGRESQL_AIVEN_PASSWORD = os.getenv("POSTGRESQL_AIVEN_PASSWORD")
 if POSTGRESQL_AIVEN_PASSWORD is None:
     raise ValueError("POSTGRESQL_AIVEN_PASSWORD environment variable not set")
 POSTGRESQL_CONNECTION_STRING = f"postgresql://{POSTGRESQL_USER}:{POSTGRESQL_AIVEN_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}?sslmode=require"
-
 # ---------------------------------------------------------------------------
 # Amazon Reviews 2023 (McAuley Lab / Hugging Face)
 # ---------------------------------------------------------------------------
