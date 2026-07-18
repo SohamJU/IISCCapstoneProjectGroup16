@@ -22,6 +22,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
+from src.agents.common import validate_agent_output, validate_user_input
 from src.agents.llm import get_llm
 from src.agents.product_agent.config import (
     MAX_REACT_ITERATIONS,
@@ -29,7 +30,7 @@ from src.agents.product_agent.config import (
     USE_TWITTER_SAMPLES,
 )
 from src.agents.product_agent.prompts import build_system_prompt
-from src.agents.product_agent.tools import get_twitter_samples, query_products
+from src.agents.product_agent.tools import query_products, search_product_reviews
 
 
 class ProductRecommendationAgent:
@@ -63,10 +64,8 @@ class ProductRecommendationAgent:
         # Load schema
         self.schema = self._load_schema()
 
-        # Build tool list — conditionally include twitter tool
-        self._tools = [query_products]
-        if self.use_twitter_samples:
-            self._tools.append(get_twitter_samples)
+        # Build tool list
+        self._tools = [query_products, search_product_reviews]
 
         # Build system prompt — conditionally include twitter sections
         self._system_prompt = build_system_prompt(
@@ -103,6 +102,10 @@ class ProductRecommendationAgent:
         str
             The agent's final answer or a clarification question.
         """
+        ok, error = validate_user_input(user_message)
+        if not ok:
+            return error
+
         config: RunnableConfig = {
             "configurable": {"thread_id": self.session_id},
             "recursion_limit": self.max_iterations * 2,
@@ -122,7 +125,9 @@ class ProductRecommendationAgent:
                     last_msg.pretty_print()
                     final_content = last_msg.content
             print(f"{'='*20} DEBUG: Agent Execution Finished {'='*20}\n")
-            return str(final_content)
+            final_text = str(final_content)
+            valid, guardrail_msg = validate_agent_output(final_text)
+            return final_text if valid else guardrail_msg
         else:
             result = self._agent.invoke(
                 {"messages": [HumanMessage(content=user_message)]},
@@ -132,7 +137,9 @@ class ProductRecommendationAgent:
             # Extract the last AI message from the result
             messages = result.get("messages", [])
             if messages:
-                return str(messages[-1].content)
+                final_text = str(messages[-1].content)
+                valid, guardrail_msg = validate_agent_output(final_text)
+                return final_text if valid else guardrail_msg
             return "I wasn't able to generate a response. Please try again."
 
     def reset_memory(self) -> None:
@@ -158,3 +165,7 @@ class ProductRecommendationAgent:
             return {"columns": [], "_note": "Schema file not found"}
         with open(PRODUCT_SCHEMA_PATH, "r", encoding="utf-8") as fh:
             return cast(dict[str, Any], json.load(fh))
+
+
+class ProductAgent(ProductRecommendationAgent):
+    """Alias retaining ProductAgent naming for new architecture."""

@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Sequence
 
 import psycopg2
 import pandas as pd
@@ -66,3 +66,73 @@ def execute_sql_query(
         return [dict(zip(columns, row)) for row in results]
     except Exception as e:
         return f"Error executing query: {e}"
+
+
+def execute_sql_query_params(
+    query: str,
+    params: Sequence[object] | None = None,
+) -> list[dict[str, object]] | str:
+    """Execute a parameterized SQL query and return rows.
+
+    Args:
+        query: SQL query string to execute.
+        params: Query parameter values.
+
+    Returns:
+        A list of dictionaries for SELECT-like queries,
+        or an error message string if execution fails.
+    """
+    try:
+        conn = psycopg2.connect(POSTGRESQL_CONNECTION_STRING)
+        cur = conn.cursor()
+        cur.execute(query, params)
+
+        if cur.description is None:
+            cur.close()
+            conn.close()
+            return []
+
+        columns = [desc[0] for desc in cur.description]
+        results = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [dict(zip(columns, row)) for row in results]
+    except Exception as e:
+        return f"Error executing query: {e}"
+
+
+def execute_sql_write(
+    query: str,
+    params: Sequence[object] | None = None,
+    *,
+    fetch_one: bool = False,
+) -> dict[str, object] | str:
+    """Execute a parameterized write query safely.
+
+    Args:
+        query: SQL write query (INSERT/UPDATE/DELETE) to execute.
+        params: Query parameter values.
+        fetch_one: Whether to return one row (useful with RETURNING).
+
+    Returns:
+        A dictionary with rowcount and optional returned row,
+        or an error message string if execution fails.
+    """
+    try:
+        conn = psycopg2.connect(POSTGRESQL_CONNECTION_STRING)
+        cur = conn.cursor()
+        cur.execute(query, params)
+
+        payload: dict[str, object] = {"rowcount": cur.rowcount}
+        if fetch_one and cur.description is not None:
+            row = cur.fetchone()
+            if row is not None:
+                columns = [desc[0] for desc in cur.description]
+                payload["row"] = dict(zip(columns, row))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+        return payload
+    except Exception as e:
+        return f"Error executing write query: {e}"

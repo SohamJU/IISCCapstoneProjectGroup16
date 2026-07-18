@@ -7,19 +7,13 @@ to the LLM's tool-calling interface.
 from __future__ import annotations
 
 import json
-import re
 from typing import Any
 
 from langchain_core.tools import tool
 
+from src.agents.common import limit_rows, reject_write_sql
 from src.data.postgresql import execute_sql_query
-
-
-# ── SQL read-only guard ───────────────────────────────────────────────────
-_WRITE_PATTERN = re.compile(
-    r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE)\b",
-    re.IGNORECASE,
-)
+from src.rag.retriever import format_matches, get_retriever
 
 _MAX_RESULT_ROWS = 5
 # truncate large result sets for token budget
@@ -40,12 +34,9 @@ def query_products(sql_query: str) -> str:
     Returns:
         JSON-formatted results, or an error/safety message.
     """
-    # Safety: reject any write operation
-    if _WRITE_PATTERN.search(sql_query):
-        return (
-            "ERROR: Only SELECT queries are allowed. "
-            "Write operations (INSERT, UPDATE, DELETE, DROP, etc.) are blocked."
-        )
+    allowed, error = reject_write_sql(sql_query)
+    if not allowed:
+        return error
 
     result: list[dict[str, Any]] | str = execute_sql_query(sql_query)
 
@@ -56,30 +47,27 @@ def query_products(sql_query: str) -> str:
     if not result:
         return "No results found for the given query."
 
-    # Truncate if too many rows
-    total = len(result)
-    if total > _MAX_RESULT_ROWS:
-        result = result[:_MAX_RESULT_ROWS]
-        footer = f"\n... (showing {_MAX_RESULT_ROWS} of {total} results)"
-    else:
-        footer = ""
+    result, footer = limit_rows(result, max_rows=_MAX_RESULT_ROWS)
 
     return json.dumps(result, indent=2, default=str) + footer
 
 
 @tool
-def get_twitter_samples(query: str) -> str:
-    """Retrieve relevant past customer support conversations from Twitter.
-
-    Use this tool to find similar past customer queries and how support
-    agents responded. Results are for tone/style reference only — SQL
-    product data always takes priority over Twitter information.
+def search_product_reviews(query: str, product_id: str = "", top_k: int = 5) -> str:
+    """Search indexed product review snippets using vector retrieval.
 
     Args:
-        query: A search query related to the user's question.
+        query: Review-related natural language query.
+        product_id: Optional product ID (ASIN) to narrow search.
+        top_k: Number of matches to return.
 
     Returns:
-        Matching conversation snippets, or a message if none found.
+        Matching review snippets, or an error message.
     """
-    # TODO: replace with vector-store retrieval
-    return "No relevant Twitter samples found."
+    try:
+        retriever = get_retriever()
+        pid = product_id.strip() or None
+        matches = retriever.search_reviews(query=query, product_id=pid, top_k=top_k)
+        return format_matches(matches)
+    except Exception as exc:
+        return f"Review retrieval error: {exc}"
