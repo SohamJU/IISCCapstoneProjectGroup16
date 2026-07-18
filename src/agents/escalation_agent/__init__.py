@@ -1,4 +1,4 @@
-"""Escalation agent package."""
+"""Escalation Agent package."""
 
 from src.agents.escalation_agent.agent import EscalationAgent
 
