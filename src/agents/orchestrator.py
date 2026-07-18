@@ -24,7 +24,7 @@ sys.path.insert(0, str(ROOT_DIR))
 from src.agents.order_agent import OrderAgent
 from src.agents.return_agent import ReturnAgent
 from src.agents.router_agent import RouteDecision, RouterAgent
-
+from src.agents.escalation_agent import EscalationAgent as RealEscalationAgent
 try:
     from src.agents.product_agent import ProductRecommendationAgent
 except ImportError as exc:  # pragma: no cover - environment dependent
@@ -44,7 +44,7 @@ class _FallbackProductAgent:
         )
 
 
-class EscalationAgent:
+class _FallbackEscalationAgent:
     """Fallback escalation agent for unknown or unsupported requests."""
 
     name = "escalation"
@@ -53,6 +53,30 @@ class EscalationAgent:
         return (
             "I’m forwarding this to a human-level specialist because your request "
             "needs extra attention. Please hold while I connect you with the right team."
+        )
+
+
+class _FallbackOrderAgent:
+    """Fallback order specialist used when the real agent cannot initialize."""
+
+    name = "order"
+
+    def chat(self, user_message: str) -> str:
+        return (
+            "I can help with order status and tracking questions, but the live order agent "
+            "is unavailable right now. Please try again shortly."
+        )
+
+
+class _FallbackReturnAgent:
+    """Fallback return specialist used when the real agent cannot initialize."""
+
+    name = "return"
+
+    def chat(self, user_message: str) -> str:
+        return (
+            "I can help with return and refund questions, but the live return agent "
+            "is unavailable right now. Please try again shortly."
         )
 
 
@@ -74,7 +98,7 @@ class Orchestrator:
     def __init__(
         self,
         session_id: str = "default",
-        default_agent: str = "product",
+        default_agent: str = "escalation",
         use_llm_fallback: bool = True,
         debug: bool = False,
     ) -> None:
@@ -85,14 +109,36 @@ class Orchestrator:
             debug=debug,
         )
         self.debug = debug
-        self._agents: dict[str, Any] = {
-            "order": OrderAgent(),
-            "return": ReturnAgent(),
-            "escalation": EscalationAgent(),
-        }
+        self._agents: dict[str, Any] = {}
+
+        try:
+            self._agents["escalation"] = RealEscalationAgent(session_id=session_id)
+        except Exception as exc:  # pragma: no cover - environment dependent
+            self._agents["escalation"] = _FallbackEscalationAgent()
+            if self.debug:
+                print("[Orchestrator] EscalationAgent initialization failed:", exc)
+
+        try:
+            self._agents["order"] = OrderAgent(session_id=session_id)
+        except Exception as exc:  # pragma: no cover - environment dependent
+            self._agents["order"] = _FallbackOrderAgent()
+            if self.debug:
+                print("[Orchestrator] OrderAgent initialization failed:", exc)
+
+        try:
+            self._agents["return"] = ReturnAgent(session_id=session_id)
+        except Exception as exc:  # pragma: no cover - environment dependent
+            self._agents["return"] = _FallbackReturnAgent()
+            if self.debug:
+                print("[Orchestrator] ReturnAgent initialization failed:", exc)
 
         if ProductRecommendationAgent is not None:
-            self._agents["product"] = ProductRecommendationAgent(session_id=session_id)
+            try:
+                self._agents["product"] = ProductRecommendationAgent(session_id=session_id)
+            except Exception as exc:  # pragma: no cover - environment dependent
+                self._agents["product"] = _FallbackProductAgent()
+                if self.debug:
+                    print("[Orchestrator] ProductRecommendationAgent initialization failed:", exc)
         else:
             self._agents["product"] = _FallbackProductAgent()
             if self.debug:
@@ -108,7 +154,7 @@ class Orchestrator:
             print(f"[Orchestrator] User input: {user_message!r}")
 
         decision = self.router.route(user_message)
-        agent_name = decision.target_agent
+        agent_name = decision.target_agent if decision.target_agent in self._agents else "escalation"
         agent = self._agents.get(agent_name, self._agents["escalation"])
 
         if self.debug:

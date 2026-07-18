@@ -39,8 +39,8 @@ class RouterAgent:
     def __init__(
         self,
         session_id: str = "default",
-        default_agent: str = "product",
-        llm: Optional[Any] = get_llm(),
+        default_agent: str = "escalation",
+        llm: Optional[Any] = None,
         use_llm_fallback: bool = True,
         debug: bool = False,
     ) -> None:
@@ -55,8 +55,9 @@ class RouterAgent:
     def route(self, user_message: str) -> RouteDecision:
         """Return a structured routing decision for the given user message."""
         if not isinstance(user_message, str) or not user_message.strip():
+            fallback_agent = "escalation" if "escalation" in self._registry else self.default_agent
             return RouteDecision(
-                target_agent=self.default_agent,
+                target_agent=fallback_agent,
                 confidence=0.2,
                 reason="No usable user message was provided.",
                 metadata={"strategy": "empty"},
@@ -139,11 +140,12 @@ class RouterAgent:
                 best_agent = agent_name
                 best_score = score
 
-        if best_score < 0:
+        if best_score < 1:
+            fallback_agent = "escalation" if "escalation" in self._registry else self.default_agent
             return RouteDecision(
-                target_agent=self.default_agent,
+                target_agent=fallback_agent,
                 confidence=0.2,
-                reason="No strong intent signals were found.",
+                reason="No strong intent signals were found; routing to escalation.",
                 metadata={"strategy": "default"},
             )
 
@@ -166,6 +168,10 @@ class RouterAgent:
         self.register_agent(
             name="return",
             description="Returns, refunds, replacements, exchanges, cancellations, and damaged items.",
+        )
+        self.register_agent(
+            name="escalation",
+            description="Unsupported, ambiguous, or complex issues that need human or specialist review.",
         )
 
     def _create_default_llm(self) -> Optional[Any]:

@@ -27,3 +27,12 @@ def test_routes_return_queries_to_return_agent() -> None:
 
     assert decision.target_agent == "return"
     assert decision.confidence >= 0.6
+
+
+def test_routes_unsupported_queries_to_escalation() -> None:
+    router = RouterAgent()
+
+    decision = router.route("I need help with an unusual billing issue and a human specialist")
+
+    assert decision.target_agent == "escalation"
+    assert decision.confidence >= 0.2
