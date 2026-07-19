@@ -21,11 +21,6 @@ jobs:
           git config --global user.email "actions@github.com"
           git config --global user.name "GitHub Actions"
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
       - name: Deploy to Hugging Face Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -59,7 +54,7 @@ jobs:
             'colorFrom: blue' \
             'colorTo: blue' \
             'sdk: gradio' \
-            'sdk_version: 5.0.0' \
+            'sdk_version: 6.0.0' \
             'app_file: app/gradio_app.py' \
             'pinned: false' \
             'license: mit' \
@@ -69,15 +64,11 @@ jobs:
             > README.md
 
           # Generate requirements.txt from pyproject.toml using shell parsing
-          if [ -f ../pyproject.toml ]; then
-            # extract lines inside dependencies = [ ... ] and strip quotes/commas
-            sed -n '/^dependencies = \[/, /\]/p' ../pyproject.toml \
-              | sed '1d;$d' \
-              | sed -E "s/^[[:space:]]*\"([^\"]+)\",?$/\1/" \
-              > requirements.txt || echo 'gradio>=5.0.0' > requirements.txt
-          else
-            echo 'gradio>=5.0.0' > requirements.txt
-          fi
+          # extract lines inside dependencies = [ ... ] and strip quotes/commas
+          sed -n '/^dependencies = \[/, /\]/p' ../pyproject.toml \
+            | sed '1d;$d' \
+            | sed -E "s/^[[:space:]]*\"([^\"]+)\",?$/\1/" \
+            > requirements.txt
 
           git add -A
           git commit -m "Deploy to HF Space from GitHub Actions" || true
