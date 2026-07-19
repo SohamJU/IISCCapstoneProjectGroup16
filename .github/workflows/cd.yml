@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
 jobs:
   deploy-to-hf-space:
-    name: Deploy to Hugging Face Space (minimal)
+    name: Deploy to Hugging Face Space
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -25,11 +25,6 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-
-      - name: Install huggingface tooling
-        run: |
-          python -m pip install --upgrade pip
-          pip install huggingface-hub
 
       - name: Deploy to Hugging Face Space
         env:
@@ -63,6 +58,33 @@ jobs:
             'if __name__ == "__main__":' \
             '    app.launch()' \
             > app.py
+
+          # Ensure README with Spaces frontmatter exists so HF knows how to run the app
+          printf '%s\n' \
+            '---' \
+            'title: "Agentic Customer Support"' \
+            'emoji: 🤖' \
+            'colorFrom: blue' \
+            'colorTo: teal' \
+            'sdk: gradio' \
+            'app_file: app.py' \
+            'pinned: false' \
+            'license: mit' \
+            '---' \
+            '' \
+            'Agentic Customer Support Gradio app.' \
+            > README.md
+
+          # Generate requirements.txt from pyproject.toml using shell parsing
+          if [ -f ../pyproject.toml ]; then
+            # extract lines inside dependencies = [ ... ] and strip quotes/commas
+            sed -n '/^dependencies = \[/, /\]/p' ../pyproject.toml \
+              | sed '1d;$d' \
+              | sed -E "s/^[[:space:]]*\"([^\"]+)\",?$/\1/" \
+              > requirements.txt || echo 'gradio>=5.0.0' > requirements.txt
+          else
+            echo 'gradio>=5.0.0' > requirements.txt
+          fi
 
           git add -A
           git commit -m "Deploy to HF Space from GitHub Actions" || true
