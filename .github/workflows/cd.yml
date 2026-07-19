@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+    - feature/hf_cd
+  workflow_dispatch:
+jobs:
+  deploy-to-hf-space:
+    name: Deploy to Hugging Face Space (minimal)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install huggingface tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface-hub
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE }}
+        run: |
+          set -euo pipefail
+          REPO="https://x-access-token:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
+          rm -rf space || true
+
+          # Try to clone existing space; otherwise initialize a new git folder
+          if git ls-remote "$REPO" >/dev/null 2>&1; then
+            git clone "$REPO" space
+            cd space
+          else
+            mkdir -p space
+            cd space
+            git init
+            git remote add origin "$REPO"
+          fi
+
+          # Copy required app files (minimal set)
+          cp -R ../app ./app
+          cp -R ../src ./src || true
+          cp -f ../pyproject.toml ./pyproject.toml || true
+
+          # Create a lightweight entrypoint that uses your existing Gradio builder
+          cat > app.py <<'PY'
+from app.gradio_app import build_app
+app = build_app()
+if __name__ == "__main__":
+    app.launch()
+PY
+
+          git add -A
+          git commit -m "Deploy to HF Space from GitHub Actions" || true
+          git push --force origin HEAD:main
+
