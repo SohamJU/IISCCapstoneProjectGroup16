@@ -65,7 +65,7 @@ jobs:
             'title: "Agentic Customer Support"' \
             'emoji: 🤖' \
             'colorFrom: blue' \
-            'colorTo: teal' \
+            'colorTo: blue' \
             'sdk: gradio' \
             'app_file: app.py' \
             'pinned: false' \
