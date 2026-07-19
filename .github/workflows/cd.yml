@@ -51,14 +51,6 @@ jobs:
           cp -R ../src ./src || true
           cp -f ../pyproject.toml ./pyproject.toml || true
 
-          # Create a lightweight entrypoint that uses your existing Gradio builder
-          printf '%s\n' \
-            'from app.gradio_app import build_app' \
-            'app = build_app()' \
-            'if __name__ == "__main__":' \
-            '    app.launch()' \
-            > app.py
-
           # Ensure README with Spaces frontmatter exists so HF knows how to run the app
           printf '%s\n' \
             '---' \
@@ -68,7 +60,7 @@ jobs:
             'colorTo: blue' \
             'sdk: gradio' \
             'sdk_version: 5.0.0' \
-            'app_file: app.py' \
+            'app_file: app/gradio_app.py' \
             'pinned: false' \
             'license: mit' \
             '---' \
