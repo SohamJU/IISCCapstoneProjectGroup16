@@ -54,7 +54,7 @@ jobs:
             'colorFrom: blue' \
             'colorTo: blue' \
             'sdk: gradio' \
-            'sdk_version: 6.0.0' \
+            'sdk_version: 6.5.0' \
             'app_file: app/gradio_app.py' \
             'pinned: false' \
             'license: mit' \
