@@ -31,8 +31,8 @@ POSTGRESQL_UPLOAD_BEHAVIOR = "skip"
 POSTGRESQL_AIVEN_PASSWORD = os.getenv("POSTGRESQL_AIVEN_PASSWORD")
 if POSTGRESQL_AIVEN_PASSWORD is None:
     raise ValueError("POSTGRESQL_AIVEN_PASSWORD environment variable not set")
-POSTGRESQL_CONNECTION_STRING = f"postgresql://{POSTGRESQL_USER}:{POSTGRESQL_AIVEN_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}?sslmode=require"
-
+# POSTGRESQL_CONNECTION_STRING = f"postgresql://{POSTGRESQL_USER}:{POSTGRESQL_AIVEN_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}?sslmode=require"
+POSTGRESQL_CONNECTION_STRING = os.getenv("POSTGRESQL_CONNECTION_STRING")
 # ---------------------------------------------------------------------------
 # Amazon Reviews 2023 (McAuley Lab / Hugging Face)
 # ---------------------------------------------------------------------------
