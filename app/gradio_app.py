@@ -51,7 +51,7 @@ def build_app() -> gr.Blocks:
     return demo
 
 
-# Expose a module-level `app` for hosting platforms (e.g. Hugging Face Spaces)
+# Expose a module-level `app` for hosting platforms (e.g. HF Spaces)
 # so they can import this module as the entrypoint. This does not launch the
 # server on import; it only constructs the Gradio `Blocks` object.
 app = build_app()
