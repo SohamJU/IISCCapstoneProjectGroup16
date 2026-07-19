@@ -4,7 +4,7 @@ on:
   push:
     branches:
     - main
-    - feature/hf_cd
+    - agents_ui_tushar # add your feature branch name here to test
   workflow_dispatch:
 jobs:
   deploy-to-hf-space:
