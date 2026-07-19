@@ -47,7 +47,7 @@
       "type": "str",
       "description": "Unique identifier for the customer.",
       "sample_values": [
-        "AHGZHMQQWETEQTCLMY7W5I7SGIWQ",
+        "AFFYEYAXFXNAK3VEJQ5EMUU4TD2A",
         "AEI5HR4W5RS4LBVYYUFIMZVEXQVA",
         "AFTY4KKPFHF3KHRFLY7S23NYP7TQ"
       ]
@@ -102,7 +102,7 @@
       "type": "str",
       "description": "Date the return was requested.",
       "sample_values": [
-        "2026-02-26",
+        "2026-03-19",
         "2015-09-13",
         "2019-11-16"
       ]

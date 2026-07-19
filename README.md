@@ -8,6 +8,7 @@ Multi-agent customer support system with:
 - Return Agent
 - Recommendation Agent
 - Retrieval-Augmented Generation (RAG)
+	- Return agent demo: `scripts/run_return_agent_demo.py`
 - Conversation Memory
 - Tool Calling
 - Evaluation Framework

@@ -96,9 +96,9 @@
       "type": "str",
       "description": "Date the customer registered.",
       "sample_values": [
-        "2023-05-07",
-        "2021-07-17",
-        "2024-07-16"
+        "2023-05-28",
+        "2021-08-07",
+        "2024-08-06"
       ]
     },
     {

@@ -7,9 +7,9 @@
       "type": "str",
       "description": "Unique identifier for the review.",
       "sample_values": [
-        "d1be68b5-767f-4bb3-8c91-fad68e0e5137",
-        "e5329114-eebc-466a-b0a4-9d0689eee1c7",
-        "7f8a31ee-4881-4ede-87e8-e01784f386ec"
+        "6b02a1d4-42a6-490d-a115-c3ad2c36c299",
+        "988a7a61-3094-44ef-ab74-140444852322",
+        "542b35cf-2802-46f2-a548-32fe2f9160cd"
       ]
     },
     {
