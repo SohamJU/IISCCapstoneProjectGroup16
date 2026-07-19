@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+    - feature/hf_cd
+  workflow_dispatch:
+jobs:
+  deploy-to-hf-space:
+    name: Deploy to Hugging Face Space
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Deploy to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ secrets.HF_SPACE }}
+        run: |
+          set -euo pipefail
+          REPO="https://x-access-token:${HF_TOKEN}@huggingface.co/spaces/${HF_SPACE}"
+          rm -rf space || true
+
+          # Try to clone existing space; otherwise initialize a new git folder
+          if git ls-remote "$REPO" >/dev/null 2>&1; then
+            git clone "$REPO" space
+            cd space
+          else
+            mkdir -p space
+            cd space
+            git init
+            git remote add origin "$REPO"
+          fi
+
+          # Copy required app files (minimal set)
+          cp -R ../app ./app
+          cp -R ../src ./src || true
+          cp -f ../pyproject.toml ./pyproject.toml || true
+
+          # Ensure README with Spaces frontmatter exists so HF knows how to run the app
+          printf '%s\n' \
+            '---' \
+            'title: "Agentic Customer Support"' \
+            'emoji: 🤖' \
+            'colorFrom: blue' \
+            'colorTo: blue' \
+            'sdk: gradio' \
+            'app_file: app/gradio_app.py' \
+            'pinned: false' \
+            'license: mit' \
+            '---' \
+            '' \
+            'Agentic Customer Support Gradio app.' \
+            > README.md
+
+          # Generate requirements.txt from pyproject.toml using shell parsing
+          # extract lines inside dependencies = [ ... ] and strip quotes/commas
+          sed -n '/^dependencies = \[/, /\]/p' ../pyproject.toml \
+            | sed '1d;$d' \
+            | sed -E "s/^[[:space:]]*\"([^\"]+)\",?$/\1/" \
+            > requirements.txt
+
+          git add -A
+          git commit -m "Deploy to HF Space from GitHub Actions" || true
+          git push --force origin HEAD:main
+
