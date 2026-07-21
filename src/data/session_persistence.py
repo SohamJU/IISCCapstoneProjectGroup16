@@ -116,6 +116,7 @@ def save_session_to_db(
             (%s, %s, %s, CURRENT_TIMESTAMP)
         ON CONFLICT (session_id)
         DO UPDATE SET
+            customer_id = EXCLUDED.customer_id,
             conversation_turns = EXCLUDED.conversation_turns,
             updated_at = CURRENT_TIMESTAMP,
             is_active = TRUE
@@ -340,3 +341,23 @@ def delete_old_sessions_for_customer(
     except Exception as e:
         print(f"[✗] Error deleting old sessions: {e}")
         return False
+
+
+def get_all_customers() -> list[str]:
+    """
+    Retrieve a list of all unique customer IDs present in the database.
+    
+    Returns:
+        List of customer_id strings.
+    """
+    try:
+        conn = psycopg2.connect(POSTGRESQL_CONNECTION_STRING)
+        cur = conn.cursor()
+        cur.execute("SELECT DISTINCT customer_id FROM customer_sessions ORDER BY customer_id;")
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return [row[0] for row in rows]
+    except Exception as e:
+        print(f"[✗] Error retrieving customer list: {e}")
+        return []

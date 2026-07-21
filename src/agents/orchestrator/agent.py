@@ -17,6 +17,8 @@ from src.agents.return_agent import ReturnAgent
 from src.agents.router import RouterAgent
 from src.config import settings
 from src.memory.session_manager import SessionManager
+from src.data.session_persistence import initialize_sessions_table
+from src.memory.persistent_session_manager import PersistentSessionManager
 
 _CLOSE_CHAT_RE = re.compile(
     r"\b(close|end|stop|exit|quit|bye|goodbye|thanks,? bye|chat over)\b",
@@ -43,6 +45,12 @@ class SupportOrchestrator:
         deterministic_mode: bool | None = None,
         auto_fallback_on_agent_init_error: bool = True,
     ) -> None:
+        # Ensure database tables exist on startup
+        try:
+            initialize_sessions_table()
+        except Exception:
+            pass
+            
         self.router = RouterAgent(use_llm_fallback=use_llm_router_fallback)
         if deterministic_mode is None:
             deterministic_mode = (
@@ -53,7 +61,7 @@ class SupportOrchestrator:
         self.auto_fallback_on_agent_init_error = auto_fallback_on_agent_init_error
         self._agent_init_reason = ""
         self._sessions: dict[str, dict[str, object]] = {}
-        self._session_manager = SessionManager()
+        self._session_manager = PersistentSessionManager(persist_to_db=True)
         self.debug = getattr(settings, "DEBUG", False)
 
     def _get_or_create_session_agents(self, session_id: str) -> dict[str, object]:
@@ -132,7 +140,7 @@ class SupportOrchestrator:
 
         return "\n".join(lines).strip()
 
-    def handle(self, user_message: str, session_id: str = "default") -> OrchestratorResponse:
+    def handle(self, user_message: str, session_id: str = "default", customer_id: str | None = None) -> OrchestratorResponse:
         """Route a request and invoke one or more specialist agents sequentially."""
         if _CLOSE_CHAT_RE.search(user_message):
             self._session_manager.clear_session(session_id)
@@ -144,10 +152,19 @@ class SupportOrchestrator:
                 routes=["closed"],
             )
 
-        session = self._session_manager.get_or_create_session(session_id)
+        session = self._session_manager.get_or_create_session(session_id, customer_id=customer_id)
         history_context = session.build_context_window(limit=6)
+
+        # Build context with customer identity and history to prevent agents asking for ID
+        context_parts = []
+        if customer_id:
+            context_parts.append(f"CUSTOMER_CONTEXT: The user is verified as customer_id '{customer_id}'. Do not ask for their ID or account info.")
+        
         if history_context:
-            enriched_message = f"Conversation history:\n{history_context}\n\nLatest user message: {user_message}"
+            context_parts.append(f"CONVERSATION_HISTORY:\n{history_context}")
+
+        if context_parts:
+            enriched_message = "\n\n".join(context_parts) + f"\n\nUSER_MESSAGE: {user_message}"
         else:
             enriched_message = user_message
 
@@ -225,11 +242,13 @@ class SupportOrchestrator:
             session_id,
             role="user",
             text=user_message,
+            customer_id=customer_id,
         )
         self._session_manager.append_turn(
             session_id,
             role="assistant",
             text=final_response,
+            customer_id=customer_id,
         )
 
         if self.debug:

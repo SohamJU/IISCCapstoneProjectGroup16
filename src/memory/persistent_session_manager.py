@@ -60,8 +60,6 @@ class PersistentSessionManager(InMemorySessionManager):
 
         # Create new session
         session = ConversationMemory(session_id=session_id)
-        if customer_id:
-            session.metadata = {"customer_id": customer_id}
         self._sessions[session_id] = session
         return session
 
