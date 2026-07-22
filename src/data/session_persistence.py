@@ -20,7 +20,7 @@ def initialize_sessions_table() -> None:
     Schema:
     - id: UUID primary key (auto-generated)
     - customer_id: VARCHAR, foreign key reference to customers table
-    - session_id: VARCHAR, unique session identifier
+    - session_id: VARCHAR, session identifier (scoped to customer)
     - conversation_turns: JSONB, stores conversation turns as JSON array
     - created_at: TIMESTAMP, when the session was started
     - updated_at: TIMESTAMP, when the session was last updated
@@ -30,45 +30,45 @@ def initialize_sessions_table() -> None:
         conn = psycopg2.connect(POSTGRESQL_CONNECTION_STRING)
         cur = conn.cursor()
 
-        # create_table_sql = """
-        # CREATE TABLE IF NOT EXISTS customer_sessions (
-        #     id SERIAL PRIMARY KEY,
-        #     customer_id VARCHAR(255) NOT NULL,
-        #     session_id VARCHAR(255) NOT NULL UNIQUE,
-        #     conversation_turns JSONB NOT NULL DEFAULT '[]'::jsonb,
-        #     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        #     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        #     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        #     INDEX idx_customer_id (customer_id),
-        #     INDEX idx_created_at (created_at DESC),
-        #     INDEX idx_is_active (is_active)
-        # );
-        # """
-        create_table_sql = """
-                -- 1. Create the base table
+        # 1. Ensure the base table exists with the correct columns
+        # Note: We create it without the UNIQUE inline to manage migrations via ALTER TABLE below
+        setup_sql = """
+        -- Create table if it doesn't exist
         CREATE TABLE IF NOT EXISTS customer_sessions (
             id SERIAL PRIMARY KEY,
             customer_id VARCHAR(255) NOT NULL,
-            session_id VARCHAR(255) NOT NULL UNIQUE,
+            session_id VARCHAR(255) NOT NULL,
             conversation_turns JSONB NOT NULL DEFAULT '[]'::jsonb,
             created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            is_active BOOLEAN NOT NULL DEFAULT TRUE
+            is_active BOOLEAN NOT NULL DEFAULT TRUE,
+            UNIQUE (customer_id, session_id)
         );
 
-        -- 2. Create the standalone indexes
+        -- 2. Migration: Ensure we have the composite UNIQUE constraint for ON CONFLICT to work
+        -- Drop the old single-column unique constraint if it exists
+        DO $$ 
+        BEGIN 
+            IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'customer_sessions_session_id_key') THEN
+                ALTER TABLE customer_sessions DROP CONSTRAINT customer_sessions_session_id_key;
+            END IF;
+
+            -- Ensure the composite unique constraint exists
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unique_customer_session') THEN
+                ALTER TABLE customer_sessions ADD CONSTRAINT unique_customer_session UNIQUE (customer_id, session_id);
+            END IF;
+        END $$;
+
+        -- 3. Create standalone indexes for performance
         CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer_id 
             ON customer_sessions (customer_id);
-
         CREATE INDEX IF NOT EXISTS idx_customer_sessions_created_at 
             ON customer_sessions (created_at DESC);
-
-        -- Optimizes lookups for active sessions (the most common query pattern)
         CREATE INDEX IF NOT EXISTS idx_customer_sessions_active_lookup 
             ON customer_sessions (customer_id) 
             WHERE is_active = TRUE;
         """
-        cur.execute(create_table_sql)
+        cur.execute(setup_sql)
         conn.commit()
         cur.close()
         conn.close()
@@ -114,7 +114,7 @@ def save_session_to_db(
             (customer_id, session_id, conversation_turns, updated_at)
         VALUES 
             (%s, %s, %s, CURRENT_TIMESTAMP)
-        ON CONFLICT (session_id)
+        ON CONFLICT ON CONSTRAINT unique_customer_session
         DO UPDATE SET
             customer_id = EXCLUDED.customer_id,
             conversation_turns = EXCLUDED.conversation_turns,
@@ -191,11 +191,12 @@ def get_customer_session_history(
         return []
 
 
-def load_session_from_db(session_id: str) -> Optional[ConversationMemory]:
+def load_session_from_db(customer_id: str, session_id: str) -> Optional[ConversationMemory]:
     """
     Load a specific session from PostgreSQL and reconstruct the ConversationMemory.
     
     Args:
+        customer_id: Unique identifier for the customer
         session_id: Unique identifier for the session
     
     Returns:
@@ -206,12 +207,12 @@ def load_session_from_db(session_id: str) -> Optional[ConversationMemory]:
         cur = conn.cursor()
 
         query_sql = """
-        SELECT conversation_turns, customer_id
+        SELECT conversation_turns
         FROM customer_sessions
-        WHERE session_id = %s;
+        WHERE customer_id = %s AND session_id = %s;
         """
 
-        cur.execute(query_sql, (session_id,))
+        cur.execute(query_sql, (customer_id, session_id))
         row = cur.fetchone()
         cur.close()
         conn.close()
@@ -219,7 +220,7 @@ def load_session_from_db(session_id: str) -> Optional[ConversationMemory]:
         if row is None:
             return None
 
-        turns_data, customer_id = row
+        turns_data = row[0]
         
         # Reconstruct ConversationMemory from stored turns
         memory = ConversationMemory(session_id=session_id)
@@ -236,11 +237,12 @@ def load_session_from_db(session_id: str) -> Optional[ConversationMemory]:
         return None
 
 
-def close_session(session_id: str) -> bool:
+def close_session(customer_id: str, session_id: str) -> bool:
     """
     Mark a session as inactive (closed) in the database.
     
     Args:
+        customer_id: Unique identifier for the customer
         session_id: Unique identifier for the session
     
     Returns:
@@ -253,10 +255,10 @@ def close_session(session_id: str) -> bool:
         update_sql = """
         UPDATE customer_sessions
         SET is_active = FALSE, updated_at = CURRENT_TIMESTAMP
-        WHERE session_id = %s;
+        WHERE customer_id = %s AND session_id = %s;
         """
 
-        cur.execute(update_sql, (session_id,))
+        cur.execute(update_sql, (customer_id, session_id))
         conn.commit()
         cur.close()
         conn.close()

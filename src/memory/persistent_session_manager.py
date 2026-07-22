@@ -47,20 +47,23 @@ class PersistentSessionManager(InMemorySessionManager):
         Returns:
             ConversationMemory object for the session
         """
+        # Use a scoped cache key to ensure customer isolation in memory
+        cache_key = f"{customer_id}:{session_id}" if customer_id else session_id
+
         # Check in-memory cache first
-        if session_id in self._sessions:
-            return self._sessions[session_id]
+        if cache_key in self._sessions:
+            return self._sessions[cache_key]
 
         # Try to load from database if persistence is enabled
         if self.persist_to_db and customer_id:
-            db_session = load_session_from_db(session_id)
+            db_session = load_session_from_db(customer_id, session_id)
             if db_session:
-                self._sessions[session_id] = db_session
+                self._sessions[cache_key] = db_session
                 return db_session
 
         # Create new session
         session = ConversationMemory(session_id=session_id)
-        self._sessions[session_id] = session
+        self._sessions[cache_key] = session
         return session
 
     def append_turn(
@@ -85,7 +88,10 @@ class PersistentSessionManager(InMemorySessionManager):
         Returns:
             Updated ConversationMemory object
         """
-        session = super().append_turn(session_id, role=role, text=text, metadata=metadata)
+        # Use scoped cache key to ensure customer isolation in memory
+        cache_key = f"{customer_id}:{session_id}" if customer_id else session_id
+        
+        session = super().append_turn(cache_key, role=role, text=text, metadata=metadata)
 
         # Persist to database if enabled and customer_id provided
         if self.persist_to_db and customer_id:
@@ -101,11 +107,14 @@ class PersistentSessionManager(InMemorySessionManager):
             session_id: Session identifier
             customer_id: Optional customer ID for cleanup
         """
-        super().clear_session(session_id)
+        # Use scoped cache key for isolation
+        cache_key = f"{customer_id}:{session_id}" if customer_id else session_id
+        
+        super().clear_session(cache_key)
 
         # Mark as inactive in database if enabled
-        if self.persist_to_db:
-            close_session(session_id)
+        if self.persist_to_db and customer_id:
+            close_session(customer_id, session_id)
 
         # Clean up old sessions if customer_id provided
         if customer_id:
