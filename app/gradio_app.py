@@ -42,8 +42,7 @@ def _respond(message: str, history: list[dict[str, str]] | None, session_id: str
 		session_id=session_id or "gradio-default",
 		customer_id=customer_id
 	)
-	routes_text = ",".join(result.routes) if result.routes else result.route
-	return f"[routes={routes_text} confidence={result.confidence:.2f}]\n{result.response}"
+	return result.response
 
 
 def build_app() -> gr.Blocks:

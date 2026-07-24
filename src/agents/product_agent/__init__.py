@@ -1,5 +1,5 @@
 """Product Recommendation Agent package."""
 
-from src.agents.product_agent.agent import ProductAgent, ProductRecommendationAgent
+from src.agents.product_agent.agent import ProductAgent, ProductInformationAgent
 
-__all__ = ["ProductAgent", "ProductRecommendationAgent"]
+__all__ = ["ProductAgent", "ProductInformationAgent"]

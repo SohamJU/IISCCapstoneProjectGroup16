@@ -24,6 +24,10 @@ _CLOSE_CHAT_RE = re.compile(
     r"\b(close|end|stop|exit|quit|bye|goodbye|thanks,? bye|chat over)\b",
     re.IGNORECASE,
 )
+_RECOMMENDATION_FOLLOWUP_RE = re.compile(
+    r"\b(more|else|others?|another|suggestions?|recommend|suggest|what else|anything else)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -107,14 +111,6 @@ class SupportOrchestrator:
         self._sessions[session_id] = agents
         return agents
 
-    @staticmethod
-    def _truncate(text: str, max_chars: int = 900) -> str:
-        """Keep merged responses concise for POC UX."""
-        compact = text.strip()
-        if len(compact) <= max_chars:
-            return compact
-        return compact[: max_chars - 3] + "..."
-
     def _merge_responses(
         self,
         route_payloads: list[tuple[str, float, str]],
@@ -124,21 +120,10 @@ class SupportOrchestrator:
             return "I wasn't able to generate a response. Please try again."
 
         if len(route_payloads) == 1:
-            return self._truncate(route_payloads[0][2])
+            return route_payloads[0][2].strip()
 
-        routes = [route for route, _, _ in route_payloads]
-        lines = [
-            f"Handled your request in {len(route_payloads)} steps: {', '.join(routes)}.",
-            "",
-        ]
-
-        for index, (route, confidence, response) in enumerate(route_payloads, start=1):
-            section = self._truncate(response)
-            lines.append(f"Step {index} - {route} (confidence {confidence:.2f})")
-            lines.append(section)
-            lines.append("")
-
-        return "\n".join(lines).strip()
+        sections = [response.strip() for _, _, response in route_payloads]
+        return "\n\n---\n\n".join(sections).strip()
 
     def handle(self, user_message: str, session_id: str = "default", customer_id: str | None = None) -> OrchestratorResponse:
         """Route a request and invoke one or more specialist agents sequentially."""
@@ -173,9 +158,27 @@ class SupportOrchestrator:
             print(f"session_id={session_id}")
             print(f"user_message={user_message}")
 
-        multi = self.router.classify_multi(enriched_message)
-        raw_routes = multi.get("routes", ["fallback"])
-        route_confidences = multi.get("confidences", {})
+        # Detect if this is a follow-up to a recommendation to bypass router
+        last_route = None
+        if session.turns:
+            for turn in reversed(session.turns):
+                if turn.role == "assistant" and turn.metadata:
+                    last_route = turn.metadata.get("route")
+                    break
+
+        is_rec_followup = (
+            last_route == "recommendation" and 
+            (len(user_message.split()) < 5 or _RECOMMENDATION_FOLLOWUP_RE.search(user_message))
+        )
+
+        if is_rec_followup:
+            raw_routes = ["recommendation"]
+            route_confidences = {"recommendation": 0.95}
+        else:
+            # Classify based on the raw user message to avoid over-routing from context/history
+            multi = self.router.classify_multi(user_message)
+            raw_routes = multi.get("routes", ["fallback"])
+            route_confidences = multi.get("confidences", {})
 
         routes: list[str] = []
         if isinstance(raw_routes, list):
@@ -249,6 +252,7 @@ class SupportOrchestrator:
             role="assistant",
             text=final_response,
             customer_id=customer_id,
+            metadata={"route": final_route, "routes": executed_routes}
         )
 
         if self.debug:

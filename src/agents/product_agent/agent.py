@@ -33,7 +33,7 @@ from src.agents.product_agent.prompts import build_system_prompt
 from src.agents.product_agent.tools import query_products, search_product_reviews
 
 
-class ProductRecommendationAgent:
+class ProductInformationAgent:
     """LangGraph-based ReAct agent that recommends products from the catalog.
 
     Parameters
@@ -122,7 +122,6 @@ class ProductRecommendationAgent:
                 msgs = event.get("messages", [])
                 if msgs:
                     last_msg = msgs[-1]
-                    last_msg.pretty_print()
                     final_content = last_msg.content
             print(f"{'='*20} DEBUG: Agent Execution Finished {'='*20}\n")
             final_text = str(final_content)
@@ -167,5 +166,5 @@ class ProductRecommendationAgent:
             return cast(dict[str, Any], json.load(fh))
 
 
-class ProductAgent(ProductRecommendationAgent):
+class ProductAgent(ProductInformationAgent):
     """Alias retaining ProductAgent naming for new architecture."""
