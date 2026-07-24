@@ -1,0 +1,72 @@
+[
+  {
+    "id": "ESC-001",
+    "user_message": "I want to speak to a human manager right now.",
+    "unresolved_attempts": 0,
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 6,
+    "expected_matched_terms": ["human", "manager"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["human", "manager", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["human", "manager"]
+  },
+  {
+    "id": "ESC-002",
+    "user_message": "This looks like legal fraud and I need help immediately.",
+    "unresolved_attempts": 0,
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 6,
+    "expected_matched_terms": ["legal", "fraud"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["legal", "fraud", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["legal", "fraud"]
+  },
+  {
+    "id": "ESC-003",
+    "user_message": "This is unacceptable. I have already tried three times and nothing is working.",
+    "unresolved_attempts": 3,
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 4,
+    "expected_matched_terms": ["unacceptable"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["unacceptable", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["unacceptable"]
+  },
+  {
+    "id": "ESC-004",
+    "user_message": "Can you explain the return policy for a damaged item?",
+    "unresolved_attempts": 0,
+    "expected_route": "return",
+    "expected_should_escalate": false,
+    "expected_risk_score": 0,
+    "expected_matched_terms": [],
+    "expected_queue": null,
+    "expected_handoff_required": false,
+    "response_keywords": ["return", "policy"],
+    "response_negative_keywords": ["human", "manager", "fraud", "legal"],
+    "must_include_terms": ["return"]
+  },
+  {
+    "id": "ESC-005",
+    "user_message": "Where is my latest shipment?",
+    "unresolved_attempts": 0,
+    "expected_route": "order",
+    "expected_should_escalate": false,
+    "expected_risk_score": 0,
+    "expected_matched_terms": [],
+    "expected_queue": null,
+    "expected_handoff_required": false,
+    "response_keywords": ["shipment", "order"],
+    "response_negative_keywords": ["human", "manager", "fraud", "legal"],
+    "must_include_terms": ["shipment"]
+  }
+]
