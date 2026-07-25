@@ -1,9 +1,10 @@
-"""Tool functions available to the Escalation Agent."""
+"""Tool functions for the Escalation Agent backend interactions."""
 
 from __future__ import annotations
 
 import json
 
+import uuid
 from langchain_core.tools import tool
 
 
@@ -62,3 +63,24 @@ def generate_handoff_summary(customer_message: str, context_summary: str = "") -
         "recommended_queue": "human_escalations",
     }
     return json.dumps(payload, indent=2)
+def create_support_ticket(customer_id: str, issue_summary: str, conversation_history: str) -> str:
+    """
+    Creates a formal support ticket in the backend system for a human agent.
+    
+    Use this tool when a user explicitly requests a human, or when a high-priority 
+    issue (like a defective product or financial dispute) requires manual review.
+    
+    Args:
+        customer_id: The unique identifier of the customer (e.g. 'AE2ODQD...').
+        issue_summary: A concise technical summary of the problem and recommended action.
+        conversation_history: The relevant snippets of the conversation for the agent.
+    """
+    ticket_id = f"TKT-{uuid.uuid4().hex[:8].upper()}"
+    
+    # In a real system, this would write to a 'tickets' table or call a CRM API
+    print(f"\n[BACKEND] Support Ticket Created: {ticket_id}")
+    print(f"[BACKEND] Customer: {customer_id}")
+    print(f"[BACKEND] Internal Summary: {issue_summary}")
+    print(f"[BACKEND] History Context Length: {len(conversation_history)} chars\n")
+    
+    return ticket_id
