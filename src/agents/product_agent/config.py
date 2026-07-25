@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 
 # ── ReAct loop ────────────────────────────────────────────────────────────
@@ -20,6 +21,13 @@ PRODUCT_SCHEMA_PATH = (
 )
 
 # ── Search / Retrieval ────────────────────────────────────────────────────
-BM25_TOP_K = 15          # candidates retrieved from BM25 index
-VECTOR_TOP_K = 15        # candidates retrieved from vector store
-HYBRID_FINAL_TOP_K = 5   # final results returned to the agent after RRF fusion
+SearchMethod = Literal["bm25", "hybrid", "pinecone"]
+VALID_SEARCH_METHODS: set[str] = {"bm25", "hybrid", "pinecone"}
+DEFAULT_SEARCH_METHOD: SearchMethod = "bm25"
+
+BM25_TOP_K = 15  # candidates retrieved from BM25 index
+VECTOR_TOP_K = 15  # candidates retrieved from vector store
+HYBRID_FINAL_TOP_K = 5  # final results returned to the agent after RRF fusion
+
+# ── BM25 local cache ─────────────────────────────────────────────────────
+BM25_CACHE_PATH = PROJECT_ROOT / "data" / "processed" / "bm25_index.pkl"

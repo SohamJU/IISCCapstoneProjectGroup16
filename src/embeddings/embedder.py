@@ -64,32 +64,22 @@ class ProductEmbedder:
         model_name: str = _MODEL_NAME,
         batch_size: int = _DEFAULT_BATCH_SIZE,
         show_progress: bool = False,
+        use_cpu: bool = False,
     ) -> None:
         self._model_name = model_name
         self._batch_size = batch_size
         self._show_progress = show_progress
+        self._use_cpu = use_cpu
         self._model: SentenceTransformer | None = None  # lazy load
 
     # ── Public API ─────────────────────────────────────────────────────────
 
     def embed_query(self, query: str) -> list[float]:
-        """Embed a single search query (applies BGE query prefix).
-
-        Parameters
-        ----------
-        query : str
-            Natural-language search query.
-
-        Returns
-        -------
-        list[float]
-            384-dimensional unit-normalised embedding vector.
-        """
+        """Embed a single search query (applies BGE query prefix)."""
         prefixed = f"{_QUERY_PREFIX}{query}"
         vec = self._model_instance.encode(
             prefixed,
             normalize_embeddings=True,
-            device="cpu",
         )
         return vec.tolist()
 
@@ -98,30 +88,37 @@ class ProductEmbedder:
         texts: list[str],
         show_progress: bool | None = None,
     ) -> np.ndarray:
-        """Embed a list of document texts (no prefix — for indexing).
-
-        Parameters
-        ----------
-        texts : list[str]
-            Raw product text strings to embed.
-        show_progress : bool | None
-            Override the instance-level ``show_progress`` setting.
-
-        Returns
-        -------
-        np.ndarray
-            Shape ``(N, 384)`` float32 array, L2-normalised rows.
-        """
+        """Embed a list of document texts (no prefix — for indexing)."""
         progress = show_progress if show_progress is not None else self._show_progress
         vecs: np.ndarray = self._model_instance.encode(
             texts,
             batch_size=self._batch_size,
             normalize_embeddings=True,
-            device="cpu",
             show_progress_bar=progress,
             convert_to_numpy=True,
         )
         return vecs.astype(np.float32)
+        
+    def embed_texts_multiprocess(self, texts: list[str]) -> np.ndarray:
+        """Embed a large list of texts using two CPU processes."""
+        model = self._model_instance
+        target_devices = ["cpu", "cpu"] if self._use_cpu else None
+        logger.info("Starting multi-process pool for %d texts with %d workers...", len(texts), len(target_devices or [0]))
+        pool = model.start_multi_process_pool(target_devices=target_devices)
+        try:
+            # Use a smaller chunk size so worker processes receive work
+            # in reasonably sized packages and make observable progress.
+            vecs = model.encode_multi_process(
+                texts,
+                pool,
+                batch_size=self._batch_size,
+                chunk_size=500,
+                normalize_embeddings=True,
+            )
+            return np.array(vecs, dtype=np.float32)
+        finally:
+            model.stop_multi_process_pool(pool)
+            logger.info("Multi-process pool stopped.")
 
     @property
     def dimension(self) -> int:
@@ -134,12 +131,15 @@ class ProductEmbedder:
     def _model_instance(self) -> "SentenceTransformer":
         """Lazy-load the SentenceTransformer model on first use."""
         if self._model is None:
-            logger.info("Loading embedding model '%s' on CPU…", self._model_name)
             from sentence_transformers import SentenceTransformer  # noqa: PLC0415
-
-            self._model = SentenceTransformer(self._model_name, device="cpu")
+            
+            device = "cpu" if self._use_cpu else None
+            self._model = SentenceTransformer(self._model_name, device=device)
+            
             logger.info(
-                "Embedding model loaded. Dimension: %d",
+                "Embedding model '%s' loaded on %s. Dimension: %d",
+                self._model_name,
+                self._model.device,
                 self._model.get_sentence_embedding_dimension(),
             )
         return self._model

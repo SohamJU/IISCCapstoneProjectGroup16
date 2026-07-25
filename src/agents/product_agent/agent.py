@@ -23,12 +23,19 @@ from langgraph.prebuilt import create_react_agent
 
 from src.agents.llm import get_llm
 from src.agents.product_agent.config import (
+    DEFAULT_SEARCH_METHOD,
     MAX_REACT_ITERATIONS,
     PRODUCT_SCHEMA_PATH,
     USE_TWITTER_SAMPLES,
+    VALID_SEARCH_METHODS,
 )
 from src.agents.product_agent.prompts import build_system_prompt
-from src.agents.product_agent.tools import get_twitter_samples, query_products, search_products
+from src.agents.product_agent.tools import (
+    get_twitter_samples,
+    query_products,
+    search_products,
+    set_search_method,
+)
 
 
 class ProductRecommendationAgent:
@@ -43,6 +50,11 @@ class ProductRecommendationAgent:
         When ``True``, includes the ``get_twitter_samples`` tool and
         adds the Twitter context / SQL-priority instruction to the
         system prompt.  When ``False``, both are fully omitted.
+    search_method : str
+        Which retrieval backend to use for product search. One of:
+        - ``"bm25"`` — keyword search only (fast, no Pinecone needed)
+        - ``"hybrid"`` — BM25 + Pinecone with RRF fusion (default, best quality)
+        - ``"pinecone"`` — semantic vector search only (requires indexed vectors)
     max_iterations : int
         Safety cap on ReAct reasoning cycles (recursion limit).
     """
@@ -51,13 +63,25 @@ class ProductRecommendationAgent:
         self,
         session_id: str = "default",
         use_twitter_samples: bool = USE_TWITTER_SAMPLES,
+        search_method: str = DEFAULT_SEARCH_METHOD,
         max_iterations: int = MAX_REACT_ITERATIONS,
         debug: bool = False,
     ) -> None:
+        # Validate search method
+        if search_method not in VALID_SEARCH_METHODS:
+            raise ValueError(
+                f"Invalid search_method '{search_method}'. "
+                f"Must be one of: {sorted(VALID_SEARCH_METHODS)}"
+            )
+
         self.session_id = session_id
         self.use_twitter_samples = use_twitter_samples
+        self.search_method = search_method
         self.max_iterations = max_iterations
         self.debug = debug
+
+        # Configure the search backend for the tools module
+        set_search_method(search_method)
 
         # Load schema
         self.schema = self._load_schema()

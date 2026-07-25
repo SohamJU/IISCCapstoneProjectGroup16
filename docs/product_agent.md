@@ -220,9 +220,11 @@ File: [`src/agents/product_agent/config.py`](../src/agents/product_agent/config.
 | `MAX_REACT_ITERATIONS` | `8` | Safety cap on ReAct reasoning loops |
 | `CONVERSATION_MEMORY_TURNS` | `10` | Recent turns stored in memory |
 | `USE_TWITTER_SAMPLES` | `False` | Enable/disable Twitter stub tool |
+| `DEFAULT_SEARCH_METHOD` | `"hybrid"` | Default retrieval backend (`bm25`, `hybrid`, `pinecone`) |
 | `BM25_TOP_K` | `15` | Candidates from BM25 index |
 | `VECTOR_TOP_K` | `15` | Candidates from Pinecone |
 | `HYBRID_FINAL_TOP_K` | `5` | Final results after RRF fusion |
+| `BM25_CACHE_PATH` | `data/processed/bm25_index.pkl` | Local pickle cache for BM25 index persistence |
 
 Environment variables (`.env`):
 
@@ -230,10 +232,44 @@ Environment variables (`.env`):
 |---|---|---|
 | `GROQ_API_KEY` | Yes | LLM provider (Groq) |
 | `POSTGRESQL_AIVEN_PASSWORD` | Yes | Database password |
-| `PINECONE_API_KEY` | For vector search | Pinecone API key |
-| `PINECONE_INDEX_NAME` | For vector search | Index name (default: `product-catalog`) |
+| `PINECONE_API_KEY` | For vector/hybrid search | Pinecone API key |
+| `PINECONE_INDEX_NAME` | For vector/hybrid search | Index name (default: `product-catalog`) |
 
 ---
+
+## Search Method Selection
+
+The agent accepts a `search_method` parameter when created:
+
+```python
+# BM25-only (fast, works out of the box, no Pinecone needed)
+agent = ProductRecommendationAgent(search_method="bm25")
+
+# Hybrid BM25 + Pinecone (default — best quality, graceful fallback)
+agent = ProductRecommendationAgent(search_method="hybrid")
+
+# Pinecone-only (pure semantic, requires indexed vectors)
+agent = ProductRecommendationAgent(search_method="pinecone")
+```
+
+| Method | Pros | Cons | When to use |
+|---|---|---|---|
+| `bm25` | Fast, no setup needed, works offline | No semantic understanding | Quick demos, exact keyword queries |
+| `hybrid` | Best quality, combines keyword + semantic | Requires Pinecone setup for full benefit | Production (default) |
+| `pinecone` | Pure semantic understanding | Requires indexed vectors, slower without BM25 | When all products are indexed and you want pure semantic |
+
+> **Note:** The `hybrid` method gracefully falls back to BM25-only if Pinecone is not configured, making it safe as a default.
+
+---
+
+## BM25 Index Persistence
+
+The BM25 index is automatically cached to disk at `data/processed/bm25_index.pkl`:
+
+- **First run:** Builds from PostgreSQL/CSV (~30s for 194k products), then auto-saves the pickle
+- **Subsequent runs:** Loads from pickle (~1s)
+- **Cache invalidation:** Delete `bm25_index.pkl` to force a rebuild (e.g., after data changes)
+
 
 ## Key Source Files
 

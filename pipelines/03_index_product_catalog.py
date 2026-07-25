@@ -44,6 +44,8 @@ from pathlib import Path
 _PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_PROJECT_ROOT))
 
+import src.windows_hotfixes  # Fix Windows DLL/UV crashes
+
 import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
@@ -132,6 +134,7 @@ def _load_catalog(max_rows: int | None) -> pd.DataFrame:
 def run(
     max_rows: int | None = None,
     skip_pinecone: bool = False,
+    force_embed: bool = False,
 ) -> None:
     """Run the full indexing pipeline."""
     from src.embeddings.embedder import ProductEmbedder
@@ -139,7 +142,7 @@ def run(
 
     logger.info("=" * 60)
     logger.info("Product Catalog Indexing Pipeline")
-    logger.info("  Embedding model : BAAI/bge-small-en-v1.5 (CPU)")
+    logger.info("  Embedding model : BAAI/bge-small-en-v1.5")
     logger.info("  Vector store    : Pinecone")
     logger.info("=" * 60)
 
@@ -154,53 +157,33 @@ def run(
     cached_ids = cache.get_cached_ids()
     logger.info("Already cached: %d products.", len(cached_ids))
 
-    todo_mask = ~df["product_id"].astype(str).isin(cached_ids)
-    df_todo = df[todo_mask].reset_index(drop=True)
+    if force_embed:
+        df_todo = df.reset_index(drop=True)
+    else:
+        todo_mask = ~df["product_id"].astype(str).isin(cached_ids)
+        df_todo = df[todo_mask].reset_index(drop=True)
     logger.info("To embed: %d products.", len(df_todo))
 
     # ── Step 3: Embed remaining products ────────────────────────────────────
     if not df_todo.empty:
         logger.info("Step 3/4 - Embedding with BAAI/bge-small-en-v1.5 (CPU)...")
-        n_batches = (len(df_todo) + _EMBED_BATCH_SIZE - 1) // _EMBED_BATCH_SIZE
-        logger.info(
-            "Estimated time: %.0f-%.0f minutes (%d batches of %d).",
-            n_batches * 2 / 60,
-            n_batches * 4 / 60,
-            n_batches,
-            _EMBED_BATCH_SIZE,
-        )
+        # Initialize embedder to strictly use CPU
+        embedder = ProductEmbedder(batch_size=_EMBED_BATCH_SIZE, show_progress=False, use_cpu=True)
 
-        embedder = ProductEmbedder(batch_size=_EMBED_BATCH_SIZE, show_progress=True)
+        logger.info("Extracting %d texts from catalog...", len(df_todo))
+        texts = [_build_text(row) for _, row in df_todo.iterrows()]
+        pids = df_todo["product_id"].astype(str).tolist()
 
-        # Accumulate for checkpoint saves
-        buffer_ids: list[str] = []
-        buffer_vecs: list[np.ndarray] = []
-
-        for batch_num, start in enumerate(
-            tqdm(range(0, len(df_todo), _EMBED_BATCH_SIZE), desc="Embedding", unit="batch"),
-            start=1,
-        ):
-            end = start + _EMBED_BATCH_SIZE
-            batch = df_todo.iloc[start:end]
-            texts = [_build_text(row) for _, row in batch.iterrows()]
-            pids = batch["product_id"].astype(str).tolist()
-
-            vecs = embedder.embed_texts(texts, show_progress=False)
-            buffer_ids.extend(pids)
-            buffer_vecs.append(vecs)
-
-            # Checkpoint: flush buffer to local cache every N batches
-            if batch_num % _CHECKPOINT_EVERY == 0:
-                save_vecs = np.vstack(buffer_vecs)
-                cache.append(buffer_ids, save_vecs)
-                logger.info("Checkpoint saved: %d products cached so far.", len(buffer_ids) + len(cached_ids))
-                buffer_ids = []
-                buffer_vecs = []
-
-        # Flush remaining buffer
-        if buffer_vecs:
-            cache.append(buffer_ids, np.vstack(buffer_vecs))
-
+        logger.info("Starting single-process embedding (with batch checkpoints)...")
+        
+        chunk_size = _EMBED_BATCH_SIZE * _CHECKPOINT_EVERY
+        for i in tqdm(range(0, len(texts), chunk_size), desc="Embedding chunks"):
+            batch_texts = texts[i : i + chunk_size]
+            batch_pids = pids[i : i + chunk_size]
+            
+            vecs = embedder.embed_texts(batch_texts, show_progress=False)
+            cache.append(batch_pids, vecs)
+            
         logger.info("Embedding complete. Local cache updated.")
     else:
         logger.info("Step 3/4 - All products already cached. Skipping embedding.")
@@ -269,9 +252,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip Pinecone upsert — embed and cache locally only.",
     )
+    parser.add_argument(
+        "--force-embed",
+        action="store_true",
+        help="Bypass local cache and embed all loaded products (for debugging).",
+    )
     args = parser.parse_args()
 
     run(
         max_rows=args.max_rows,
         skip_pinecone=args.no_pinecone,
+        force_embed=args.force_embed,
     )

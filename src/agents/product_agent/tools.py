@@ -37,6 +37,24 @@ _WRITE_PATTERN = re.compile(
 
 _MAX_RESULT_ROWS = 5  # truncate large result sets for token budget
 
+# ── Search method routing ─────────────────────────────────────────────────────
+_SEARCH_METHOD: str = "hybrid"  # set by the agent at init time
+
+
+def set_search_method(method: str) -> None:
+    """Set the search method used by ``search_products``.
+
+    Called by ``ProductRecommendationAgent.__init__`` to configure which
+    retrieval backend the tool should use.
+
+    Parameters
+    ----------
+    method : str
+        One of ``"bm25"``, ``"hybrid"``, ``"pinecone"``.
+    """
+    global _SEARCH_METHOD  # noqa: PLW0603
+    _SEARCH_METHOD = method
+
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -89,21 +107,52 @@ def search_products(
     Returns:
         JSON-formatted ranked product results, or a message if none found.
     """
-    # Import lazily to avoid slow startup when tool is not used
-    from src.search.bm25_index import get_bm25_index
-
     top_k = min(int(top_k), 10)
 
     try:
-        from src.search.hybrid_search import hybrid_search  # noqa: PLC0415
+        if _SEARCH_METHOD == "bm25":
+            from src.search.bm25_index import get_bm25_index  # noqa: PLC0415
 
-        results = hybrid_search(
-            query=query,
-            top_k=top_k,
-            price_min=price_min,
-            price_max=price_max,
-            category=category,
-        )
+            results = get_bm25_index().search(
+                query=query,
+                top_k=top_k,
+                price_min=price_min,
+                price_max=price_max,
+                category=category,
+            )
+        elif _SEARCH_METHOD == "pinecone":
+            from src.embeddings.embedder import get_embedder  # noqa: PLC0415
+            from src.embeddings.vector_store import PineconeVectorStore  # noqa: PLC0415
+
+            store = PineconeVectorStore()
+            if not store.is_available():
+                return (
+                    "Pinecone is not configured. Set PINECONE_API_KEY in .env "
+                    "or switch to search_method='bm25' or 'hybrid'."
+                )
+            q_vec = get_embedder().embed_query(query)
+            filter_dict: dict[str, Any] = {}
+            if category:
+                filter_dict["main_category"] = {"$eq": category}
+            if price_min is not None:
+                filter_dict.setdefault("price", {})["$gte"] = price_min
+            if price_max is not None:
+                filter_dict.setdefault("price", {})["$lte"] = price_max
+            results = store.query(
+                embedding=q_vec,
+                top_k=top_k,
+                filter_dict=filter_dict or None,
+            )
+        else:  # "hybrid" (default)
+            from src.search.hybrid_search import hybrid_search  # noqa: PLC0415
+
+            results = hybrid_search(
+                query=query,
+                top_k=top_k,
+                price_min=price_min,
+                price_max=price_max,
+                category=category,
+            )
     except Exception as exc:
         return f"Search error: {exc}. Try using query_products with a SQL query instead."
 

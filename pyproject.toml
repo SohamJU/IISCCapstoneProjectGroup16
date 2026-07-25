@@ -12,7 +12,6 @@ dependencies = [
     "sqlalchemy>=2.0.51",
     "datasets>=3.5.0",
     "faker>=37.0.0",
-    "dataset>=2.0.0",
     "langchain-openai>=0.3.0",
     "langchain-core>=0.3.0",
     "langgraph>=1.2.0",
@@ -20,10 +19,11 @@ dependencies = [
     "faker",
     "google-genai",
     "rank-bm25>=0.2.2",
-    "sentence-transformers>=3.0.0",
+    "sentence-transformers==3.0.0",
     "pinecone>=5.0.0",
     "tqdm>=4.68.3",
     "numpy>=2.5.0",
+    "torch",
 ]
 
 [project.optional-dependencies]
@@ -35,3 +35,13 @@ dev = [
     "pandas-stubs>=3.0.3.260530",
     "types-psycopg2"
 ]
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+torchvision = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
