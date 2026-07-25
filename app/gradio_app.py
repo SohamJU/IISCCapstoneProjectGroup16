@@ -17,6 +17,7 @@ if ROOT not in sys.path:
 from src.agents.orchestrator.agent import SupportOrchestrator
 from src.data.postgresql import execute_sql_query
 
+
 ORCHESTRATOR = SupportOrchestrator()
 
 
