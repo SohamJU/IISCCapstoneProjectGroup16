@@ -71,7 +71,7 @@ class RouterAgent:
             keyword_routes.append(("return", 0.95))
         if _ORDER_RE.search(user_message):
             keyword_routes.append(("order", 0.95))
-        if _RECOMMEND_RE.search(user_message) or _CUSTOMER_ID_RE.search(user_message):
+        if _RECOMMEND_RE.search(user_message):
             keyword_routes.append(("recommendation", 0.92))
         if _PRODUCT_RE.search(user_message):
             keyword_routes.append(("product", 0.90))

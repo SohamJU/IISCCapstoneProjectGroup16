@@ -87,13 +87,19 @@ def recommend_for_customer(
     if not customer_rows:
         return f"Unknown customer_id={customer_id}."
 
+    # Only consider the last 5 orders for building category preferences
     history_rows = execute_sql_query_params(
         """
         SELECT oi.product_id, pc.main_category
-        FROM orders o
-        JOIN order_items oi ON o.order_id = oi.order_id
+        FROM order_items oi
+        JOIN orders o ON o.order_id = oi.order_id
         LEFT JOIN product_catalog pc ON pc.product_id = oi.product_id
-        WHERE o.customer_id = %s
+        WHERE o.order_id IN (
+            SELECT order_id FROM orders 
+            WHERE customer_id = %s 
+            ORDER BY order_date DESC 
+            LIMIT 5
+        )
         """,
         (customer_id,),
     )

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ESC-001",
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 6,
+    "expected_matched_terms": ["human", "manager"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["human", "manager", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["human", "escalation"]
+  },
+  {
+    "id": "ESC-002",
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 6,
+    "expected_matched_terms": ["legal", "fraud"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["legal", "fraud", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["legal", "fraud"]
+  },
+  {
+    "id": "ESC-003",
+    "expected_route": "escalation",
+    "expected_should_escalate": true,
+    "expected_risk_score": 4,
+    "expected_matched_terms": ["unacceptable"],
+    "expected_queue": "human_escalations",
+    "expected_handoff_required": true,
+    "response_keywords": ["unacceptable", "escalation"],
+    "response_negative_keywords": [],
+    "must_include_terms": ["unacceptable"]
+  },
+  {
+    "id": "ESC-004",
+    "expected_route": "return",
+    "expected_should_escalate": false,
+    "expected_risk_score": 0,
+    "expected_matched_terms": [],
+    "expected_queue": null,
+    "expected_handoff_required": false,
+    "response_keywords": ["return", "policy"],
+    "response_negative_keywords": ["human", "manager", "fraud", "legal"],
+    "must_include_terms": ["return"]
+  },
+  {
+    "id": "ESC-005",
+    "expected_route": "order",
+    "expected_should_escalate": false,
+    "expected_risk_score": 0,
+    "expected_matched_terms": [],
+    "expected_queue": null,
+    "expected_handoff_required": false,
+    "response_keywords": ["shipment", "order"],
+    "response_negative_keywords": ["human", "manager", "fraud", "legal"],
+    "must_include_terms": ["shipment"]
+  }
+]
