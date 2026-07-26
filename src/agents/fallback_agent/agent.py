@@ -1,15 +1,42 @@
-"""Fallback agent for out-of-scope queries."""
+"""Fallback agent for greetings, small talk and out-of-scope queries.
+
+Deliberately LLM-free: these replies must be instant, free and identical
+every time. It implements the same ``run``/``chat`` surface as
+:class:`src.agents.base_agent.SpecialistAgent` so the supervisor graph can
+dispatch to it without special-casing.
+"""
 
 from __future__ import annotations
 
+from langchain_core.messages import AnyMessage, HumanMessage
+
+from src.agents.base_agent import AgentResult
 from src.agents.common import standard_out_of_scope_message, validate_user_input
 
 
 class FallbackAgent:
-    """Simple fallback agent for unsupported intents."""
+    """Simple deterministic agent for unsupported intents."""
 
-    def __init__(self, session_id: str = "default") -> None:
+    name = "fallback"
+
+    def __init__(self, session_id: str = "default", debug: bool = False) -> None:
         self.session_id = session_id
+        self.debug = debug
+
+    def run(
+        self,
+        messages: list[AnyMessage],
+        scope_instruction: str = "",
+        history_window: int = 0,
+    ) -> AgentResult:
+        """Return a canned in-scope guidance reply for the latest user turn."""
+        latest = ""
+        for message in reversed(messages):
+            if isinstance(message, HumanMessage):
+                latest = str(message.content)
+                break
+
+        return AgentResult(name=self.name, text=standard_out_of_scope_message(latest))
 
     def chat(self, user_message: str) -> str:
         """Return a warmer fallback response for unsupported requests."""

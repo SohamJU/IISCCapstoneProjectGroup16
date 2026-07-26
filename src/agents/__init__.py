@@ -1,5 +1,6 @@
 """Agent package exports."""
 
+from src.agents.base_agent import AgentResult, SpecialistAgent
 from src.agents.deterministic_agent import DeterministicSupportAgent
 from src.agents.escalation_agent import EscalationAgent
 from src.agents.fallback_agent import FallbackAgent
@@ -11,6 +12,7 @@ from src.agents.return_agent import ReturnAgent
 from src.agents.router import RouterAgent
 
 __all__ = [
+	"AgentResult",
 	"DeterministicSupportAgent",
 	"EscalationAgent",
 	"FallbackAgent",
@@ -20,7 +22,7 @@ __all__ = [
 	"ProductRecommendationAgent",
 	"RecommendationAgent",
 	"RouterAgent",
+	"SpecialistAgent",
 	"SupportOrchestrator",
 	"ReturnAgent",
 ]
-

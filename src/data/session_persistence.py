@@ -7,10 +7,14 @@ from datetime import datetime
 from typing import Optional
 
 import psycopg2
+from psycopg2.errors import UndefinedTable
 from psycopg2.extras import Json
 
 from src.config.data import POSTGRESQL_CONNECTION_STRING
 from src.memory.conversation_memory import ConversationMemory
+from src.utils.logger import get_logger
+
+_LOGGER = get_logger(__name__)
 
 
 def initialize_sessions_table() -> None:
@@ -49,12 +53,19 @@ def initialize_sessions_table() -> None:
         CREATE TABLE IF NOT EXISTS customer_sessions (
             id SERIAL PRIMARY KEY,
             customer_id VARCHAR(255) NOT NULL,
-            session_id VARCHAR(255) NOT NULL UNIQUE,
+            session_id VARCHAR(255) NOT NULL,
             conversation_turns JSONB NOT NULL DEFAULT '[]'::jsonb,
             created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
             is_active BOOLEAN NOT NULL DEFAULT TRUE
         );
+
+        -- The upsert in save_session_to_db targets (customer_id, session_id).
+        -- The deployed table was created before this constraint existed, so
+        -- ON CONFLICT (session_id) matched nothing and EVERY save silently
+        -- failed. Ensure the constraint the upsert relies on actually exists.
+        CREATE UNIQUE INDEX IF NOT EXISTS unique_customer_session
+            ON customer_sessions (customer_id, session_id);
 
         -- 2. Create the standalone indexes
         CREATE INDEX IF NOT EXISTS idx_customer_sessions_customer_id 
@@ -93,45 +104,67 @@ def save_session_to_db(
     
     Returns:
         True if successful, False otherwise
+
+    Notes:
+        This database is shared across the team, so ``customer_sessions`` can
+        disappear underneath a running app when someone re-runs a pipeline or
+        drops tables. Previously that produced an endless stream of
+        ``relation "customer_sessions" does not exist`` on every turn with no
+        recovery and no signal in the UI. The table is now recreated once and
+        the write retried, so the app self-heals instead of silently losing
+        every conversation for the rest of the process's life.
     """
-    try:
+    # Convert turns to JSON-serializable format
+    turns_data = [
+        {
+            "role": turn.role,
+            "text": turn.text,
+            "metadata": turn.metadata or {},
+        }
+        for turn in conversation_memory.turns
+    ]
+
+    # Upsert: if (customer_id, session_id) exists, update it; otherwise insert
+    upsert_sql = """
+    INSERT INTO customer_sessions
+        (customer_id, session_id, conversation_turns, updated_at)
+    VALUES
+        (%s, %s, %s, CURRENT_TIMESTAMP)
+    ON CONFLICT (customer_id, session_id)
+    DO UPDATE SET
+        conversation_turns = EXCLUDED.conversation_turns,
+        updated_at = CURRENT_TIMESTAMP,
+        is_active = TRUE
+    RETURNING id;
+    """
+
+    def _attempt() -> bool:
         conn = psycopg2.connect(POSTGRESQL_CONNECTION_STRING)
-        cur = conn.cursor()
+        try:
+            cur = conn.cursor()
+            cur.execute(upsert_sql, (customer_id, session_id, Json(turns_data)))
+            result = cur.fetchone()
+            conn.commit()
+            cur.close()
+            return result is not None
+        finally:
+            conn.close()
 
-        # Convert turns to JSON-serializable format
-        turns_data = [
-            {
-                "role": turn.role,
-                "text": turn.text,
-                "metadata": turn.metadata or {},
-            }
-            for turn in conversation_memory.turns
-        ]
-
-        # Upsert: if session_id exists, update it; otherwise insert
-        upsert_sql = """
-        INSERT INTO customer_sessions 
-            (customer_id, session_id, conversation_turns, updated_at)
-        VALUES 
-            (%s, %s, %s, CURRENT_TIMESTAMP)
-        ON CONFLICT (session_id)
-        DO UPDATE SET
-            customer_id = EXCLUDED.customer_id,
-            conversation_turns = EXCLUDED.conversation_turns,
-            updated_at = CURRENT_TIMESTAMP,
-            is_active = TRUE
-        RETURNING id;
-        """
-
-        cur.execute(upsert_sql, (customer_id, session_id, Json(turns_data)))
-        result = cur.fetchone()
-        conn.commit()
-        cur.close()
-        conn.close()
-
-        return result is not None
-    except Exception as e:
-        print(f"[✗] Error saving session to database: {e}")
+    try:
+        return _attempt()
+    except UndefinedTable:
+        _LOGGER.warning(
+            "customer_sessions is missing (dropped by another process?) — "
+            "recreating and retrying the write."
+        )
+        try:
+            initialize_sessions_table()
+            return _attempt()
+        except Exception as exc:
+            _LOGGER.error("Could not recreate customer_sessions: %s", exc)
+            return False
+    except Exception as exc:
+        _LOGGER.error("Error saving session to database: %s", exc)
         return False
 
 

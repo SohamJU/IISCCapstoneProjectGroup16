@@ -15,6 +15,10 @@ from src.rag.retriever import format_matches, get_retriever
 
 _RETURN_ID_RE = re.compile(r"^RET-\d{6}$")
 
+#: Deliberately permissive on digit count so a customer typing "ORD-1234"
+#: gets a "no such order" answer rather than a format lecture.
+_ORDER_ID_RE_LOOSE = re.compile(r"^ORD-\d{1,10}$", re.IGNORECASE)
+
 
 def _next_return_id() -> str:
     rows = execute_sql_query_params(
@@ -86,8 +90,92 @@ def lookup_return_policy(query: str) -> str:
 
 
 @tool
-def check_return_eligibility(order_id: str, order_item_id: str) -> str:
-    """Check whether a specific order item is eligible for return."""
+def list_order_items(order_id: str) -> str:
+    """List the items in an order, with product names and return eligibility.
+
+    ALWAYS call this first when a customer wants to return something and has
+    given you an order ID. It resolves the internal order_item_id for you.
+
+    Customers do not know their order_item_id — it is an internal database key
+    they have never seen. Never ask them for it. Use this tool, then:
+      * exactly one returnable item -> proceed with it, naming the product;
+      * several -> ask which one by PRODUCT NAME, not by ID.
+
+    Args:
+        order_id: The order identifier, e.g. "ORD-000123".
+
+    Returns:
+        JSON list of items with order_item_id, product title, quantity, price
+        and status, plus a summary of how many are present.
+    """
+    cleaned = order_id.strip().upper()
+    if not _ORDER_ID_RE_LOOSE.match(cleaned):
+        return "Invalid order_id format. Expected something like ORD-000123."
+
+    rows = execute_sql_query_params(
+        """
+        SELECT
+            oi.order_item_id,
+            oi.product_id,
+            pc.title AS product_title,
+            oi.quantity,
+            oi.unit_price,
+            oi.item_status,
+            o.status AS order_status,
+            o.order_date
+        FROM orders o
+        JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN product_catalog pc ON pc.product_id = oi.product_id
+        WHERE o.order_id = %s
+        ORDER BY oi.order_item_id
+        """,
+        (cleaned,),
+    )
+
+    if isinstance(rows, str):
+        return rows
+    if not rows:
+        return f"No items found for order_id={cleaned}. Please check the order number."
+
+    returnable = [
+        row
+        for row in rows
+        if str(row.get("item_status", "")).lower() not in {"cancelled", "returned"}
+        and str(row.get("order_status", "")).lower() not in {"cancelled", "returned"}
+    ]
+
+    payload = {
+        "order_id": cleaned,
+        "item_count": len(rows),
+        "returnable_count": len(returnable),
+        "items": rows,
+    }
+
+    if len(returnable) == 1:
+        payload["guidance"] = (
+            f"Only one returnable item ({returnable[0].get('product_title') or returnable[0].get('product_id')}). "
+            "Proceed with its order_item_id — do NOT ask the customer to choose or to supply an ID."
+        )
+    elif len(returnable) > 1:
+        payload["guidance"] = (
+            "Multiple returnable items. Ask the customer which one by PRODUCT NAME. "
+            "Never show or request the order_item_id."
+        )
+    else:
+        payload["guidance"] = "No returnable items on this order."
+
+    return json.dumps(payload, indent=2, default=str)
+
+
+def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
+    """Eligibility check as a plain function.
+
+    Kept separate from the ``@tool`` wrapper below because ``create_return_request``
+    needs to reuse it. ``@tool`` turns a function into a ``StructuredTool``
+    object, which is NOT directly callable — invoking one like a function
+    raises ``'StructuredTool' object is not callable``. Tools must therefore
+    never call each other directly; they share plain helpers like this instead.
+    """
     rows = execute_sql_query_params(
         """
         SELECT
@@ -157,9 +245,38 @@ def check_return_eligibility(order_id: str, order_item_id: str) -> str:
 
 
 @tool
+def check_return_eligibility(order_id: str, order_item_id: str) -> str:
+    """Check whether a specific order item is eligible for return.
+
+    Call list_order_items first to obtain the order_item_id — never ask the
+    customer for it.
+
+    Args:
+        order_id: The order identifier, e.g. "ORD-000123".
+        order_item_id: The internal item id from list_order_items.
+
+    Returns:
+        JSON with `eligible`, the item's age in days, and the return window.
+    """
+    return _check_return_eligibility(order_id, order_item_id)
+
+
+@tool
 def create_return_request(order_id: str, order_item_id: str, reason: str) -> str:
-    """Create a return request if item is eligible."""
-    eligibility = check_return_eligibility(order_id=order_id, order_item_id=order_item_id)
+    """Create a return request for an eligible order item.
+
+    Call list_order_items first to obtain the order_item_id — never ask the
+    customer for it.
+
+    Args:
+        order_id: The order identifier, e.g. "ORD-000123".
+        order_item_id: The internal item id from list_order_items.
+        reason: The customer's stated reason for returning.
+
+    Returns:
+        JSON describing the created return, or why it could not be created.
+    """
+    eligibility = _check_return_eligibility(order_id, order_item_id)
     try:
         parsed = json.loads(eligibility)
     except json.JSONDecodeError:

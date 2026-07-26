@@ -15,15 +15,66 @@ def get_db_engine() -> Engine:
     return create_engine(POSTGRESQL_CONNECTION_STRING)
 
 
-def upload_dataframe_to_postgresql_db(df: pd.DataFrame, table_name: str, if_exists: str = "replace") -> None:
+#: Values pandas' ``to_sql`` actually accepts. Anything else (notably the
+#: config's ``"skip"`` sentinel) must be resolved by the caller before it
+#: reaches this layer.
+VALID_IF_EXISTS = frozenset({"fail", "append", "replace"})
+
+
+class DestructiveWriteNotConfirmed(RuntimeError):
+    """Raised when a table-dropping write is attempted without explicit opt-in."""
+
+
+def upload_dataframe_to_postgresql_db(
+    df: pd.DataFrame,
+    table_name: str,
+    if_exists: str = "fail",
+    *,
+    confirm_destructive: bool = False,
+) -> None:
     """
     Upload a pandas DataFrame to a PostgreSQL database.
 
     Args:
         df: The pandas DataFrame to upload.
         table_name: The name of the target SQL table.
-        if_exists: How to handle existing data in the table. Options are 'fail', 'replace', or 'append'.
+        if_exists: How to handle an existing table. One of 'fail', 'append',
+            'replace'. Defaults to 'fail' — see the safety note below.
+        confirm_destructive: Must be True to allow ``if_exists="replace"``,
+            which DROPS the existing table.
+
+    Raises:
+        ValueError: If ``if_exists`` is not a value pandas understands.
+        DestructiveWriteNotConfirmed: If a 'replace' was requested without
+            ``confirm_destructive=True``.
+
+    Safety note:
+        This default used to be ``"replace"``, which drops and recreates the
+        target table. This project points at a **shared** Aiven database used
+        by the whole team, so any accidental call — a stray import, a notebook
+        cell, a pipeline re-run — silently destroyed everyone's data. The
+        default is now the non-destructive, non-duplicating 'fail', and
+        dropping a table requires opting in twice: ``if_exists="replace"``
+        *and* ``confirm_destructive=True``.
+
+        'append' is deliberately not the default either: re-running a pipeline
+        would silently duplicate every row, which is harder to notice than an
+        outright error.
     """
+    if if_exists not in VALID_IF_EXISTS:
+        raise ValueError(
+            f"if_exists must be one of {sorted(VALID_IF_EXISTS)}, got {if_exists!r}. "
+            "(The 'skip' sentinel is a pipeline-level concept — resolve it before "
+            "calling this function.)"
+        )
+
+    if if_exists == "replace" and not confirm_destructive:
+        raise DestructiveWriteNotConfirmed(
+            f"Refusing to replace table '{table_name}': this DROPS the existing "
+            f"table on a database shared with the whole team. If that is genuinely "
+            f"what you want, pass confirm_destructive=True."
+        )
+
     # Create a SQLAlchemy engine using the connection string
     sql_engine = get_db_engine()
 
@@ -31,7 +82,7 @@ def upload_dataframe_to_postgresql_db(df: pd.DataFrame, table_name: str, if_exis
     df.to_sql(
         name=table_name,            # Name of the target SQL table
         con=sql_engine,             # Database connection engine
-        if_exists=if_exists, # type: ignore[arg-type] # Drops and recreates the table if it exists
+        if_exists=if_exists,        # type: ignore[arg-type]
         index=False                 # Prevents pandas index from becoming a column
     )
 

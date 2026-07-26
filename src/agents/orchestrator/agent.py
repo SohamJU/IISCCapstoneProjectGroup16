@@ -1,27 +1,49 @@
-"""Router-centric orchestrator for all support agents."""
+"""Router-centric orchestrator for all support agents.
+
+This is now a thin adapter over the LangGraph supervisor in
+:mod:`src.agents.graph`. It owns three things the graph does not:
+
+* the public ``handle()`` API used by the CLI, Gradio app and tests,
+* session close/reset semantics,
+* mirroring turns into the ``customer_sessions`` table so history survives a
+  process restart and can be shown per customer.
+
+Everything else — routing, dispatch, shared state, synthesis — lives in the
+graph.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 import os
 import re
+from dataclasses import dataclass, field
+from typing import Any
+
+from langchain_core.messages import AIMessage, HumanMessage
 
 from src.agents.deterministic_agent import DeterministicSupportAgent
-from src.agents.escalation_agent import EscalationAgent
-from src.agents.fallback_agent import FallbackAgent
-from src.agents.orchestrator.config import LOW_CONFIDENCE_THRESHOLD
-from src.agents.order_agent import OrderAgent
-from src.agents.product_agent import ProductAgent
-from src.agents.recommendation_agent import RecommendationAgent
-from src.agents.return_agent import ReturnAgent
+from src.agents.graph import build_specialists, build_support_graph, new_turn_state
 from src.agents.router import RouterAgent
 from src.config import settings
-from src.memory.session_manager import SessionManager
 from src.data.session_persistence import initialize_sessions_table
 from src.memory.persistent_session_manager import PersistentSessionManager
+from src.utils.logger import get_logger
 
+_LOGGER = get_logger(__name__)
+
+# Only treat a message as "close the chat" when that is the *whole* message.
+# The previous pattern matched close|end|stop|exit|quit|bye anywhere in the
+# text, so "when does the return window close?", "I want to stop the
+# subscription" and "it should arrive by the end of the week" all silently
+# terminated the customer's session mid-conversation.
 _CLOSE_CHAT_RE = re.compile(
-    r"\b(close|end|stop|exit|quit|bye|goodbye|thanks,? bye|chat over)\b",
+    r"^\s*(?:"
+    r"bye|goodbye|good\s?bye|exit|quit|"
+    r"(?:ok(?:ay)?[,\s]*)?(?:thanks?|thank\s+you)[,\s]*(?:bye|goodbye)|"
+    r"that'?s\s+all(?:\s+thanks?)?|"
+    r"close\s+(?:the\s+)?(?:chat|session)|"
+    r"end\s+(?:the\s+)?(?:chat|session)"
+    r")\s*[.!]*\s*$",
     re.IGNORECASE,
 )
 
@@ -34,10 +56,13 @@ class OrchestratorResponse:
     confidence: float
     response: str
     routes: list[str] = field(default_factory=list)
+    tools_used: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    degraded: bool = False
 
 
 class SupportOrchestrator:
-    """Single-entry orchestrator that routes all requests through RouterAgent."""
+    """Single-entry orchestrator backed by the LangGraph supervisor."""
 
     def __init__(
         self,
@@ -45,219 +70,274 @@ class SupportOrchestrator:
         deterministic_mode: bool | None = None,
         auto_fallback_on_agent_init_error: bool = True,
     ) -> None:
-        # Ensure database tables exist on startup
         try:
             initialize_sessions_table()
-        except Exception:
-            pass
-            
-        self.router = RouterAgent(use_llm_fallback=use_llm_router_fallback)
+        except Exception as exc:
+            # Still non-fatal — chat works without persistence — but no longer
+            # silent. A bare `except: pass` here hid a broken upsert for the
+            # entire life of the feature.
+            _LOGGER.warning("Session table init failed, persistence disabled: %s", exc)
+
         if deterministic_mode is None:
             deterministic_mode = (
                 os.getenv("SUPPORT_DETERMINISTIC_MODE", "false").strip().lower()
                 in {"1", "true", "yes", "on"}
             )
-        self.deterministic_mode = deterministic_mode
+
+        self.deterministic_mode = bool(deterministic_mode)
         self.auto_fallback_on_agent_init_error = auto_fallback_on_agent_init_error
-        self._agent_init_reason = ""
-        self._sessions: dict[str, dict[str, object]] = {}
-        self._session_manager = PersistentSessionManager(persist_to_db=True)
+        self.degraded_reason = ""
         self.debug = getattr(settings, "DEBUG", False)
 
-    def _get_or_create_session_agents(self, session_id: str) -> dict[str, object]:
-        agents = self._sessions.get(session_id)
-        if agents is not None:
-            return agents
+        self.router = RouterAgent(use_llm_fallback=use_llm_router_fallback)
+        if self.router.init_error:
+            self.degraded_reason = f"router LLM unavailable ({self.router.init_error})"
+
+        self._session_manager = PersistentSessionManager(persist_to_db=True)
+        self._graph = None
+        self._deterministic_agents: dict[str, Any] = {}
 
         if self.deterministic_mode:
-            agents = {
-                "product": DeterministicSupportAgent("product", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "order": DeterministicSupportAgent("order", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "return": DeterministicSupportAgent("return", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "recommendation": DeterministicSupportAgent("recommendation", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "escalation": DeterministicSupportAgent("escalation", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "fallback": DeterministicSupportAgent("fallback", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-            }
-            self._sessions[session_id] = agents
-            return agents
+            self._build_deterministic_agents("SUPPORT_DETERMINISTIC_MODE enabled")
+        else:
+            self._build_graph()
 
+    # ── Construction ──────────────────────────────────────────────────────
+
+    def _build_graph(self) -> None:
+        """Build the supervisor graph, degrading loudly on failure."""
         try:
-            agents = {
-                "product": ProductAgent(session_id=session_id),
-                "order": OrderAgent(session_id=session_id),
-                "return": ReturnAgent(session_id=session_id),
-                "recommendation": RecommendationAgent(session_id=session_id),
-                "escalation": EscalationAgent(session_id=session_id),
-                "fallback": FallbackAgent(session_id=session_id),
-            }
+            specialists = build_specialists(debug=self.debug)
+            self._graph = build_support_graph(
+                specialists=specialists,
+                router=self.router,
+                debug=self.debug,
+            )
         except Exception as exc:
             if not self.auto_fallback_on_agent_init_error:
                 raise
+            reason = f"{type(exc).__name__}: {exc}"
+            # This path used to be completely invisible: a bad GROQ_API_KEY
+            # swapped all six agents for canned deterministic strings and the
+            # UI reported nothing, so "bad answers" looked like a model
+            # quality problem rather than a config problem.
+            _LOGGER.error(
+                "Agent initialisation failed — falling back to DETERMINISTIC MODE. "
+                "Answers will be canned until this is fixed. Cause: %s",
+                reason,
+            )
             self.deterministic_mode = True
-            self._agent_init_reason = f"agent init fallback: {type(exc).__name__}"
-            agents = {
-                "product": DeterministicSupportAgent("product", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "order": DeterministicSupportAgent("order", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "return": DeterministicSupportAgent("return", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "recommendation": DeterministicSupportAgent("recommendation", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "escalation": DeterministicSupportAgent("escalation", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-                "fallback": DeterministicSupportAgent("fallback", session_id=session_id, reason=self._agent_init_reason, debug=self.debug),
-            }
+            self._build_deterministic_agents(f"agent init failed: {reason}")
 
-        self._sessions[session_id] = agents
-        return agents
+    def _build_deterministic_agents(self, reason: str) -> None:
+        """Populate the LLM-free fallback agents."""
+        self.degraded_reason = reason
+        self._deterministic_agents = {
+            route: DeterministicSupportAgent(
+                route, reason=reason, debug=self.debug
+            )
+            for route in (
+                "product",
+                "order",
+                "return",
+                "recommendation",
+                "escalation",
+                "fallback",
+            )
+        }
+
+    # ── Public API ────────────────────────────────────────────────────────
+
+    @property
+    def is_degraded(self) -> bool:
+        """True when the system is not running full LLM agents."""
+        return self.deterministic_mode or bool(self.degraded_reason)
 
     @staticmethod
-    def _truncate(text: str, max_chars: int = 900) -> str:
-        """Keep merged responses concise for POC UX."""
-        compact = text.strip()
-        if len(compact) <= max_chars:
-            return compact
-        return compact[: max_chars - 3] + "..."
+    def _thread_id(session_id: str, customer_id: str | None) -> str:
+        """Namespace the graph thread by customer.
 
-    def _merge_responses(
+        The checkpointer was previously keyed on ``session_id`` alone. Because
+        the UI holds the session ID constant while the customer dropdown
+        changes, switching customer mid-session resumed the *previous*
+        customer's message history — one customer could see another's
+        conversation, and agents would act on the wrong person's orders.
+
+        Scoping the thread key by customer makes that structurally impossible,
+        regardless of what the caller passes as ``session_id``. Database
+        persistence is already keyed on ``(customer_id, session_id)``, so this
+        brings the in-memory graph state in line with it.
+        """
+        return f"{customer_id or 'anon'}::{session_id}"
+
+    def handle(
         self,
-        route_payloads: list[tuple[str, float, str]],
-    ) -> str:
-        """Merge per-route outputs into one deterministic, readable response."""
-        if not route_payloads:
-            return "I wasn't able to generate a response. Please try again."
-
-        if len(route_payloads) == 1:
-            return self._truncate(route_payloads[0][2])
-
-        routes = [route for route, _, _ in route_payloads]
-        lines = [
-            f"Handled your request in {len(route_payloads)} steps: {', '.join(routes)}.",
-            "",
-        ]
-
-        for index, (route, confidence, response) in enumerate(route_payloads, start=1):
-            section = self._truncate(response)
-            lines.append(f"Step {index} - {route} (confidence {confidence:.2f})")
-            lines.append(section)
-            lines.append("")
-
-        return "\n".join(lines).strip()
-
-    def handle(self, user_message: str, session_id: str = "default", customer_id: str | None = None) -> OrchestratorResponse:
-        """Route a request and invoke one or more specialist agents sequentially."""
-        if _CLOSE_CHAT_RE.search(user_message):
-            self._session_manager.clear_session(session_id)
-            self._sessions.pop(session_id, None)
+        user_message: str,
+        session_id: str = "default",
+        customer_id: str | None = None,
+    ) -> OrchestratorResponse:
+        """Route a request through the graph and return the unified reply."""
+        if _CLOSE_CHAT_RE.match(user_message.strip()):
+            self.reset_session(session_id, customer_id=customer_id)
             return OrchestratorResponse(
                 route="closed",
                 confidence=1.0,
-                response="Chat session closed. You can start a new session with a new session ID.",
+                response="Chat session closed. Start a new session any time.",
                 routes=["closed"],
             )
 
-        session = self._session_manager.get_or_create_session(session_id, customer_id=customer_id)
-        history_context = session.build_context_window(limit=6)
+        if self.deterministic_mode:
+            return self._handle_deterministic(user_message, session_id, customer_id)
 
-        # Build context with customer identity and history to prevent agents asking for ID
-        context_parts = []
-        if customer_id:
-            context_parts.append(f"CUSTOMER_CONTEXT: The user is verified as customer_id '{customer_id}'. Do not ask for their ID or account info.")
-        
-        if history_context:
-            context_parts.append(f"CONVERSATION_HISTORY:\n{history_context}")
+        assert self._graph is not None  # guaranteed by __init__
 
-        if context_parts:
-            enriched_message = "\n\n".join(context_parts) + f"\n\nUSER_MESSAGE: {user_message}"
-        else:
-            enriched_message = user_message
+        self._seed_history_if_new(session_id, customer_id)
 
-        if self.debug:
-            print(f"\n=== DEBUG WORKFLOW START ===")
-            print(f"session_id={session_id}")
-            print(f"user_message={user_message}")
+        config = {
+            "configurable": {"thread_id": self._thread_id(session_id, customer_id)},
+            "recursion_limit": 50,
+        }
+        state_delta = new_turn_state(user_message, session_id, customer_id)
 
-        multi = self.router.classify_multi(enriched_message)
-        raw_routes = multi.get("routes", ["fallback"])
-        route_confidences = multi.get("confidences", {})
+        try:
+            final_state = self._graph.invoke(state_delta, config=config)
+        except Exception as exc:
+            _LOGGER.error("Graph invocation failed: %s", exc, exc_info=True)
+            return OrchestratorResponse(
+                route="error",
+                confidence=0.0,
+                response=(
+                    "Something went wrong while handling that request. "
+                    "Please try again in a moment."
+                ),
+                routes=["error"],
+                warnings=[f"{type(exc).__name__}: {exc}"],
+            )
 
-        routes: list[str] = []
-        if isinstance(raw_routes, list):
-            for item in raw_routes:
-                route_name = str(item)
-                if route_name in {
-                    "product",
-                    "order",
-                    "return",
-                    "recommendation",
-                    "escalation",
-                    "fallback",
-                } and route_name not in routes:
-                    routes.append(route_name)
+        response_text = str(final_state.get("final_response") or "").strip()
+        if not response_text:
+            response_text = "I wasn't able to generate a response. Please try again."
+
+        executed = [str(route) for route in (final_state.get("executed_routes") or [])]
+        routes = executed or [str(route) for route in (final_state.get("routes") or [])]
+        warnings = [str(w) for w in (final_state.get("warnings") or [])]
 
         if not routes:
-            routes = ["fallback"]
+            if any("ratelimit" in w.lower() or "429" in w for w in warnings):
+                routes = ["unavailable"]
+            elif final_state.get("direct_response"):
+                routes = ["clarify"]
+            else:
+                routes = ["fallback"]
 
-        if self.debug:
-            print(f"route_decision={routes}")
-            print(f"route_confidences={route_confidences}")
-
-        agents = self._get_or_create_session_agents(session_id)
-        executed_routes: list[str] = []
-        executed_confidences: list[float] = []
-        route_payloads: list[tuple[str, float, str]] = []
-
-        for route in routes:
-            confidence = 0.0
-            if isinstance(route_confidences, dict):
-                confidence = float(route_confidences.get(route, 0.0))
-
-            effective_route = route
-            if (
-                route in {"product", "order", "return", "recommendation"}
-                and confidence < LOW_CONFIDENCE_THRESHOLD
-            ):
-                effective_route = "escalation"
-
-            agent = agents.get(effective_route)
-            if agent is None:
-                effective_route = "fallback"
-                agent = agents["fallback"]
-
-            scoped_message = self.router.build_subtask_message(effective_route, enriched_message)
-            if self.debug:
-                print(f"calling_agent={effective_route}")
-                print(f"agent_input={scoped_message}")
-
-            agent_response = agent.chat(scoped_message)  # type: ignore[attr-defined]
-            if self.debug:
-                print(f"agent_output[{effective_route}]={agent_response}")
-            executed_routes.append(effective_route)
-            executed_confidences.append(confidence)
-            route_payloads.append((effective_route, confidence, agent_response))
-
-        final_route = executed_routes[0] if executed_routes else "fallback"
-        final_confidence = min(executed_confidences) if executed_confidences else 0.0
-        final_response = self._merge_responses(route_payloads)
-        if not final_response:
-            final_response = "I wasn't able to generate a response. Please try again."
-
-        self._session_manager.append_turn(
-            session_id,
-            role="user",
-            text=user_message,
-            customer_id=customer_id,
-        )
-        self._session_manager.append_turn(
-            session_id,
-            role="assistant",
-            text=final_response,
-            customer_id=customer_id,
-        )
-
-        if self.debug:
-            print(f"final_response={final_response}")
-            print("=== DEBUG WORKFLOW END ===\n")
+        self._persist_turn(session_id, customer_id, user_message, response_text)
 
         return OrchestratorResponse(
-            route=final_route,
-            confidence=final_confidence,
-            response=final_response,
-            routes=executed_routes,
+            route=routes[0],
+            confidence=float(final_state.get("confidence") or 0.0),
+            response=response_text,
+            routes=routes,
+            tools_used=[str(t) for t in (final_state.get("tools_used") or [])],
+            warnings=warnings,
+            degraded=self.is_degraded,
         )
+
+    def reset_session(self, session_id: str, customer_id: str | None = None) -> None:
+        """Clear both graph state and stored history for a session."""
+        self._session_manager.clear_session(session_id)
+        if self._graph is not None:
+            try:
+                # Wipe the checkpointed message list for this thread.
+                self._graph.update_state(
+                    {"configurable": {"thread_id": self._thread_id(session_id, customer_id)}},
+                    {"messages": [], "facts": {}, "agent_outputs": []},
+                )
+            except Exception as exc:
+                _LOGGER.debug("Could not reset graph state for %s: %s", session_id, exc)
+
+    # ── Deterministic mode ────────────────────────────────────────────────
+
+    def _handle_deterministic(
+        self,
+        user_message: str,
+        session_id: str,
+        customer_id: str | None,
+    ) -> OrchestratorResponse:
+        """Serve a turn without any LLM calls."""
+        route = self.router.route(user_message)
+        agent = self._deterministic_agents.get(route) or self._deterministic_agents["fallback"]
+        response_text = agent.chat(user_message)
+
+        self._persist_turn(session_id, customer_id, user_message, response_text)
+
+        return OrchestratorResponse(
+            route=route,
+            confidence=0.0,
+            response=response_text,
+            routes=[route],
+            warnings=[self.degraded_reason] if self.degraded_reason else [],
+            degraded=True,
+        )
+
+    # ── Persistence helpers ───────────────────────────────────────────────
+
+    def _seed_history_if_new(self, session_id: str, customer_id: str | None) -> None:
+        """Load stored turns into graph state the first time a session is seen.
+
+        This replaces the old approach of prepending a ``CONVERSATION_HISTORY:``
+        block to *every* user message — which duplicated context the agents
+        already had and polluted the conversation record.
+        """
+        if self._graph is None:
+            return
+
+        config = {"configurable": {"thread_id": self._thread_id(session_id, customer_id)}}
+        try:
+            existing = self._graph.get_state(config)
+            if existing.values.get("messages"):
+                return  # graph already has this thread
+        except Exception:
+            pass
+
+        session = self._session_manager.get_or_create_session(
+            session_id, customer_id=customer_id
+        )
+        if not session.turns:
+            return
+
+        seeded = []
+        for turn in session.get_recent_turns(limit=10):
+            if turn.role == "user":
+                seeded.append(HumanMessage(content=turn.text))
+            elif turn.role == "assistant":
+                seeded.append(AIMessage(content=turn.text))
+
+        if seeded:
+            try:
+                self._graph.update_state(config, {"messages": seeded})
+                _LOGGER.info(
+                    "Seeded %d stored turns into session %s", len(seeded), session_id
+                )
+            except Exception as exc:
+                _LOGGER.warning("Could not seed history for %s: %s", session_id, exc)
+
+    def _persist_turn(
+        self,
+        session_id: str,
+        customer_id: str | None,
+        user_message: str,
+        response_text: str,
+    ) -> None:
+        """Mirror the completed turn into the session store."""
+        try:
+            self._session_manager.append_turn(
+                session_id, role="user", text=user_message, customer_id=customer_id
+            )
+            self._session_manager.append_turn(
+                session_id,
+                role="assistant",
+                text=response_text,
+                customer_id=customer_id,
+            )
+        except Exception as exc:
+            _LOGGER.warning("Could not persist turn for %s: %s", session_id, exc)

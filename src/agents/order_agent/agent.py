@@ -1,14 +1,12 @@
-"""Order Agent — LangGraph ReAct agent with memory."""
+"""Order Agent — stateless LangGraph ReAct agent.
+
+Conversation state is owned by the supervisor graph
+(:mod:`src.agents.graph`), not by this class.
+"""
 
 from __future__ import annotations
 
-from langchain_core.messages import HumanMessage
-from langchain_core.runnables import RunnableConfig
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
-
-from src.agents.common import validate_agent_output, validate_user_input
-from src.agents.llm import get_llm
+from src.agents.base_agent import SpecialistAgent
 from src.agents.order_agent.config import MAX_REACT_ITERATIONS
 from src.agents.order_agent.prompts import build_system_prompt
 from src.agents.order_agent.tools import (
@@ -18,10 +16,11 @@ from src.agents.order_agent.tools import (
     place_order,
     track_order,
 )
+from src.agents.shared_tools import lookup_support_policy
 
 
-class OrderAgent:
-    """LangGraph ReAct order-support agent."""
+class OrderAgent(SpecialistAgent):
+    """ReAct agent for order placement, tracking, status and cancellation."""
 
     def __init__(
         self,
@@ -29,69 +28,22 @@ class OrderAgent:
         max_iterations: int = MAX_REACT_ITERATIONS,
         debug: bool = False,
     ) -> None:
-        self.session_id = session_id
-        self.max_iterations = max_iterations
-        self.debug = debug
-
-        self._tools = [
-            place_order,
-            get_order_status,
-            track_order,
-            cancel_order,
-            list_customer_orders,
-        ]
-        self._system_prompt = build_system_prompt()
-        self._checkpointer = MemorySaver()
-        self._agent = create_react_agent(
-            model=get_llm(),
-            tools=self._tools,
-            prompt=self._system_prompt,
-            checkpointer=self._checkpointer,
-        )
-
-    def chat(self, user_message: str) -> str:
-        """Process a user message and return the Order Agent response."""
-        ok, error = validate_user_input(user_message)
-        if not ok:
-            return error
-
-        config: RunnableConfig = {
-            "configurable": {"thread_id": self.session_id},
-            "recursion_limit": self.max_iterations * 2,
-        }
-
-        if self.debug:
-            final_content = "I wasn't able to generate a response. Please try again."
-            for event in self._agent.stream(
-                {"messages": [HumanMessage(content=user_message)]},
-                config=config,
-                stream_mode="values",
-            ):
-                messages = event.get("messages", [])
-                if messages:
-                    final_content = str(messages[-1].content)
-            valid, guardrail_msg = validate_agent_output(final_content)
-            return final_content if valid else guardrail_msg
-
-        result = self._agent.invoke(
-            {"messages": [HumanMessage(content=user_message)]},
-            config=config,
-        )
-
-        messages = result.get("messages", [])
-        if not messages:
-            return "I wasn't able to generate a response. Please try again."
-
-        final = str(messages[-1].content)
-        valid, guardrail_msg = validate_agent_output(final)
-        return final if valid else guardrail_msg
-
-    def reset_memory(self) -> None:
-        """Clear conversation history for this session."""
-        self._checkpointer = MemorySaver()
-        self._agent = create_react_agent(
-            model=get_llm(),
-            tools=self._tools,
-            prompt=self._system_prompt,
-            checkpointer=self._checkpointer,
+        super().__init__(
+            name="order",
+            system_prompt=build_system_prompt(),
+            tools=[
+                get_order_status,
+                track_order,
+                list_customer_orders,
+                cancel_order,
+                place_order,
+                # Order agents field "can I still cancel?" and "when will it
+                # arrive?" constantly. Without this they had no grounded source
+                # for shipping/cancellation rules despite being told never to
+                # invent policy terms.
+                lookup_support_policy,
+            ],
+            max_iterations=max_iterations,
+            session_id=session_id,
+            debug=debug,
         )
