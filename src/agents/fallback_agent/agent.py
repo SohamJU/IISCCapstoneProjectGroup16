@@ -28,6 +28,7 @@ class FallbackAgent:
         messages: list[AnyMessage],
         scope_instruction: str = "",
         history_window: int = 0,
+        customer_id: str | None = None,
     ) -> AgentResult:
         """Return a canned in-scope guidance reply for the latest user turn."""
         latest = ""

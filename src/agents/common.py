@@ -5,14 +5,53 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from src.agents.guardrails.ml_input_scanner import scan_input as _ml_scan
 
 _WRITE_PATTERN = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE)\b",
     re.IGNORECASE,
 )
 
+# Fast-path regex: catches common injection phrases without any ML cost.
+# Deliberately broad so that obvious variants are blocked before the ML
+# scanner runs.  The ML scanner (opt-in via ENABLE_ML_GUARDRAIL=true) then
+# catches obfuscated / paraphrased variants that regex misses.
+#
+# Design choices:
+#   - (ignore|disregard|forget) + (\w+\s+){0,4} + <target noun>
+#       The filler group handles "your", "all", "all previous", "the", etc.
+#       Up to four filler words covers realistic variants without runaway
+#       backtracking on short inputs (length cap is 4 000 chars).
+#   - "bypass" requires a safety-context noun so "bypass the slow shipping
+#       option" does NOT trigger.
+#   - "act as (a|an)" requires a specific adversarial role so "act as a
+#       product guide" does NOT trigger.
 _INJECTION_PATTERN = re.compile(
-    r"(?i)(ignore previous instructions|system prompt|developer message|jailbreak|bypass)",
+    r"(?i)("
+    # Core: ignore / disregard / forget + 0-4 filler words + target noun
+    r"(ignore|disregard|forget)\s+(\w+\s+){0,4}"
+    r"(instructions?|directives?|rules?|prompts?|guidelines?|constraints?|policies)"
+    # pretend the/your system/instructions say/are ...
+    r"|pretend\s+(your|the)\s+(system|instructions?|rules?)\s+(say|state|are|is)"
+    # you are now <something>
+    r"|you\s+are\s+now\b"
+    # act as if you are [anything]
+    r"|act\s+as\s+if\s+you\s+are"
+    # act as a/an [specific adversarial role] — NOT generic "act as a guide"
+    r"|act\s+as\s+(a|an)\s+(unrestricted|uncensored|unlimited|unfiltered"
+    r"|jailbroken|evil|rogue|hacker"
+    r"|different\s+(AI|model|assistant)|GPT|DAN)\b"
+    # system prompt as a phrase
+    r"|system\s+prompt"
+    # developer message as a phrase
+    r"|developer\s+message"
+    # jailbreak keyword
+    r"|jailbreak"
+    # bypass only when followed by a safety-context noun (avoids false
+    # positives on "bypass the slow shipping option")
+    r"|bypass\s+(\w+\s+){0,3}"
+    r"(safety|filters?|guardrails?|restrictions?|blocks?|limits?|policies|policy|controls?)"
+    r")"
 )
 
 
@@ -40,7 +79,22 @@ def standard_out_of_scope_message(user_message: str | None = None) -> str:
 
 
 def validate_user_input(user_message: str) -> tuple[bool, str]:
-    """Apply lightweight input guardrails before sending prompts to the model."""
+    """Apply input guardrails before sending prompts to the model.
+
+    Checks run in order of cost — cheapest first:
+
+    1. **Empty check** — always instant.
+    2. **Length cap** (4 000 chars) — always instant.
+    3. **Regex injection fast-path** — microsecond cost, catches obvious
+       variants (ignore/disregard/forget instructions, jailbreak, etc.).
+    4. **ML scanner** (opt-in, ``ENABLE_ML_GUARDRAIL=true``) — BERT-based
+       classifier from ``llm-guard``.  Catches paraphrased / obfuscated
+       injection attempts that the regex misses.  Adds ~80–200 ms on CPU.
+       **Disabled by default** — the bundled model produces false positives
+       on legitimate e-commerce phrases ("Return this and reorder it"
+       scores 1.0).  Enable only after tuning ``ML_GUARDRAIL_THRESHOLD``
+       against a sample of real customer messages.
+    """
     trimmed = user_message.strip()
     if not trimmed:
         return False, "Please share your request so I can help."
@@ -53,6 +107,12 @@ def validate_user_input(user_message: str) -> tuple[bool, str]:
             "I can't follow instructions that try to override system rules. "
             "Please ask a normal product or support question."
         )
+
+    # ML-based scanner — runs only when ENABLE_ML_GUARDRAIL=true.
+    # Positioned after the regex so the common cases pay zero ML cost.
+    ok, error = _ml_scan(trimmed)
+    if not ok:
+        return False, error
 
     return True, ""
 

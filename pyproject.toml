@@ -21,6 +21,7 @@ dependencies = [
     "gradio>=5.0.0",
     "openai",
     "ipykernel>=7.3.0",
+    "llm-guard>=0.3.12",
 ]
 
 [project.optional-dependencies]
