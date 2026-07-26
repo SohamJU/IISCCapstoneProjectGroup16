@@ -150,6 +150,30 @@ def test_fallback_agent_run_returns_agent_result() -> None:
     assert result.ok
 
 
+def test_every_specialist_accepts_the_same_run_signature() -> None:
+    """FallbackAgent duck-types SpecialistAgent instead of inheriting from it.
+
+    The supervisor calls ``run(messages, scope_instruction=..., customer_id=...)``
+    on every route alike, so a parameter added to SpecialistAgent.run and not
+    mirrored on FallbackAgent breaks the fallback route entirely — a bare "Hi"
+    raised TypeError and surfaced as "Something went wrong". Assert the shared
+    surface rather than trusting the two to stay in step.
+    """
+    import inspect
+
+    from src.agents.base_agent import SpecialistAgent
+
+    expected = set(inspect.signature(SpecialistAgent.run).parameters)
+    actual = set(inspect.signature(FallbackAgent.run).parameters)
+    missing = expected - actual
+    assert not missing, f"FallbackAgent.run is missing parameter(s): {sorted(missing)}"
+
+
+def test_fallback_agent_run_accepts_customer_id() -> None:
+    result = FallbackAgent().run([HumanMessage(content="Hi")], customer_id="CUST-1")
+    assert result.ok
+
+
 def test_chunk_text_keeps_non_empty_chunks() -> None:
     text = " ".join(["alpha"] * 500)
     chunks = chunk_text(text, chunk_size=120, overlap=20)

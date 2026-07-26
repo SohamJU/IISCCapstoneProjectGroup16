@@ -28,8 +28,17 @@ class FallbackAgent:
         messages: list[AnyMessage],
         scope_instruction: str = "",
         history_window: int = 0,
+        customer_id: str | None = None,
     ) -> AgentResult:
-        """Return a canned in-scope guidance reply for the latest user turn."""
+        """Return a canned in-scope guidance reply for the latest user turn.
+
+        ``customer_id`` is accepted and ignored: this agent touches no
+        customer data, but the supervisor passes the same arguments to every
+        specialist. This class duck-types :class:`SpecialistAgent` rather than
+        inheriting from it, so signature changes there must be mirrored here —
+        omitting this parameter made every fallback-routed turn (including a
+        bare "Hi") raise TypeError and surface as a generic error.
+        """
         latest = ""
         for message in reversed(messages):
             if isinstance(message, HumanMessage):
@@ -38,7 +47,7 @@ class FallbackAgent:
 
         return AgentResult(name=self.name, text=standard_out_of_scope_message(latest))
 
-    def chat(self, user_message: str) -> str:
+    def chat(self, user_message: str, customer_id: str | None = None) -> str:
         """Return a warmer fallback response for unsupported requests."""
         ok, error = validate_user_input(user_message)
         if not ok:

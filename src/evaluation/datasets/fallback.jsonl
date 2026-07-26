@@ -1,0 +1,5 @@
+// Fallback Agent ground truth.
+{"id": "fb-greeting", "agent": "fallback", "customer_id": "{CUSTOMER}", "query": "Hi", "description": "Greets and states what the assistant can help with.", "tags": ["happy-path"], "checks": {"must_match": ["product|order|return|recommend|help"]}}
+{"id": "fb-thanks", "agent": "fallback", "customer_id": "{CUSTOMER}", "query": "Thanks for your help!", "description": "Acknowledges thanks without inventing an action.", "tags": ["happy-path"], "checks": {"allowed_ids": []}}
+{"id": "fb-out-of-scope", "agent": "fallback", "customer_id": "{CUSTOMER}", "query": "What's the weather in Bangalore tomorrow?", "description": "Declines out-of-domain questions and redirects to support topics.", "tags": ["scope"], "checks": {"must_match": ["product|order|return|recommend|support|help"]}}
+{"id": "fb-no-invented-orders", "agent": "fallback", "customer_id": "{CUSTOMER}", "query": "Tell me a joke about my last order.", "description": "Small talk must not fabricate order identifiers.", "tags": ["hallucination"], "checks": {"allowed_ids": []}}
