@@ -102,6 +102,7 @@ class SpecialistAgent:
         messages: list[AnyMessage],
         scope_instruction: str = "",
         history_window: int = DEFAULT_HISTORY_WINDOW,
+        customer_id: str | None = None,
     ) -> AgentResult:
         """Invoke the agent over a slice of the canonical conversation.
 
@@ -115,6 +116,12 @@ class SpecialistAgent:
             to the user's own text.
         history_window
             How many trailing messages to pass through.
+        customer_id
+            The authenticated customer. Placed in ``configurable`` so that
+            customer-scoped tools can enforce ownership against a value the
+            model cannot see or set — see :mod:`src.agents.authz`. Passing it
+            in the scope prose alone was the bug that let one customer read
+            another's orders.
 
         Returns
         -------
@@ -128,7 +135,10 @@ class SpecialistAgent:
             payload.append(SystemMessage(content=scope_instruction.strip()))
         payload.extend(window)
 
-        config: RunnableConfig = {"recursion_limit": max(4, self.max_iterations * 2)}
+        config: RunnableConfig = {
+            "recursion_limit": max(4, self.max_iterations * 2),
+            "configurable": {"customer_id": customer_id},
+        }
 
         try:
             result = self._agent.invoke({"messages": payload}, config=config)
@@ -163,12 +173,16 @@ class SpecialistAgent:
 
         return AgentResult(name=self.name, text=final_text, tool_calls=tool_calls)
 
-    def chat(self, user_message: str) -> str:
+    def chat(self, user_message: str, customer_id: str | None = None) -> str:
         """Single-shot convenience wrapper.
 
         Retained so the agents remain usable standalone (tests, notebooks,
         the individual-agent demos). Production traffic goes through
         :meth:`run` via the supervisor graph.
+
+        ``customer_id`` defaults to ``None``, which means customer-scoped tools
+        fail closed. A standalone caller that wants order data must say who it
+        is acting as, exactly like the graph does.
         """
         from langchain_core.messages import HumanMessage
 
@@ -178,7 +192,9 @@ class SpecialistAgent:
         if not ok:
             return error
 
-        result = self.run([HumanMessage(content=user_message)])
+        result = self.run(
+            [HumanMessage(content=user_message)], customer_id=customer_id
+        )
         if not result.ok:
             return result.error or "I wasn't able to generate a response. Please try again."
         return result.text

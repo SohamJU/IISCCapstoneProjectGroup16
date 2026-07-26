@@ -3,21 +3,25 @@
 from __future__ import annotations
 
 import json
-import re
 from datetime import UTC, datetime
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from src.agents.authz import (
+    authorize_order,
+    authorize_order_item,
+    authorize_return,
+    require_customer_id,
+)
 from src.agents.return_agent.config import KNOWLEDGE_BASE_DIR, RETURN_WINDOW_DAYS
 from src.data.postgresql import execute_sql_query_params, execute_sql_write
 from src.rag.retriever import format_matches, get_retriever
 
 
-_RETURN_ID_RE = re.compile(r"^RET-\d{6}$")
-
-#: Deliberately permissive on digit count so a customer typing "ORD-1234"
-#: gets a "no such order" answer rather than a format lecture.
-_ORDER_ID_RE_LOOSE = re.compile(r"^ORD-\d{1,10}$", re.IGNORECASE)
+# NOTE: returns are a write path against another customer's money. Every tool
+# here that names an order, order item or return resolves it through
+# :mod:`src.agents.authz` first — see the module docstring there.
 
 
 def _next_return_id() -> str:
@@ -90,8 +94,8 @@ def lookup_return_policy(query: str) -> str:
 
 
 @tool
-def list_order_items(order_id: str) -> str:
-    """List the items in an order, with product names and return eligibility.
+def list_order_items(order_id: str, config: RunnableConfig) -> str:
+    """List the items in the customer's own order, with return eligibility.
 
     ALWAYS call this first when a customer wants to return something and has
     given you an order ID. It resolves the internal order_item_id for you.
@@ -101,6 +105,8 @@ def list_order_items(order_id: str) -> str:
       * exactly one returnable item -> proceed with it, naming the product;
       * several -> ask which one by PRODUCT NAME, not by ID.
 
+    Only works for orders belonging to the current customer.
+
     Args:
         order_id: The order identifier, e.g. "ORD-000123".
 
@@ -108,9 +114,12 @@ def list_order_items(order_id: str) -> str:
         JSON list of items with order_item_id, product title, quantity, price
         and status, plus a summary of how many are present.
     """
-    cleaned = order_id.strip().upper()
-    if not _ORDER_ID_RE_LOOSE.match(cleaned):
-        return "Invalid order_id format. Expected something like ORD-000123."
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+    cleaned, error = authorize_order(order_id, config)
+    if error:
+        return error
 
     rows = execute_sql_query_params(
         """
@@ -126,10 +135,10 @@ def list_order_items(order_id: str) -> str:
         FROM orders o
         JOIN order_items oi ON o.order_id = oi.order_id
         LEFT JOIN product_catalog pc ON pc.product_id = oi.product_id
-        WHERE o.order_id = %s
+        WHERE o.order_id = %s AND o.customer_id = %s
         ORDER BY oi.order_item_id
         """,
-        (cleaned,),
+        (cleaned, customer_id),
     )
 
     if isinstance(rows, str):
@@ -167,7 +176,11 @@ def list_order_items(order_id: str) -> str:
     return json.dumps(payload, indent=2, default=str)
 
 
-def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
+def _check_return_eligibility(
+    order_id: str,
+    order_item_id: str,
+    config: RunnableConfig | None,
+) -> str:
     """Eligibility check as a plain function.
 
     Kept separate from the ``@tool`` wrapper below because ``create_return_request``
@@ -175,7 +188,20 @@ def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
     object, which is NOT directly callable — invoking one like a function
     raises ``'StructuredTool' object is not callable``. Tools must therefore
     never call each other directly; they share plain helpers like this instead.
+
+    ``config`` is threaded through rather than dropped: this helper is the gate
+    ``create_return_request`` relies on, so it must enforce ownership itself
+    instead of trusting its caller to have done it.
     """
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+    clean_order, clean_item, error = authorize_order_item(
+        order_id, order_item_id, config
+    )
+    if error:
+        return error
+
     rows = execute_sql_query_params(
         """
         SELECT
@@ -189,9 +215,9 @@ def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
             oi.unit_price
         FROM orders o
         JOIN order_items oi ON o.order_id = oi.order_id
-        WHERE o.order_id = %s AND oi.order_item_id = %s
+        WHERE o.order_id = %s AND oi.order_item_id = %s AND o.customer_id = %s
         """,
-        (order_id, order_item_id),
+        (clean_order, clean_item, customer_id),
     )
 
     if isinstance(rows, str):
@@ -235,8 +261,8 @@ def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
         "eligible": eligible,
         "age_days": age_days,
         "return_window_days": RETURN_WINDOW_DAYS,
-        "order_id": order_id,
-        "order_item_id": order_item_id,
+        "order_id": clean_order,
+        "order_item_id": clean_item,
     }
     if not eligible:
         payload["reason"] = "Return window exceeded for standard returns."
@@ -245,11 +271,13 @@ def _check_return_eligibility(order_id: str, order_item_id: str) -> str:
 
 
 @tool
-def check_return_eligibility(order_id: str, order_item_id: str) -> str:
-    """Check whether a specific order item is eligible for return.
+def check_return_eligibility(
+    order_id: str, order_item_id: str, config: RunnableConfig
+) -> str:
+    """Check whether one of the customer's own order items can be returned.
 
     Call list_order_items first to obtain the order_item_id — never ask the
-    customer for it.
+    customer for it. Only works for orders belonging to the current customer.
 
     Args:
         order_id: The order identifier, e.g. "ORD-000123".
@@ -258,15 +286,17 @@ def check_return_eligibility(order_id: str, order_item_id: str) -> str:
     Returns:
         JSON with `eligible`, the item's age in days, and the return window.
     """
-    return _check_return_eligibility(order_id, order_item_id)
+    return _check_return_eligibility(order_id, order_item_id, config)
 
 
 @tool
-def create_return_request(order_id: str, order_item_id: str, reason: str) -> str:
-    """Create a return request for an eligible order item.
+def create_return_request(
+    order_id: str, order_item_id: str, reason: str, config: RunnableConfig
+) -> str:
+    """Create a return request for one of the customer's own order items.
 
     Call list_order_items first to obtain the order_item_id — never ask the
-    customer for it.
+    customer for it. Only works for orders belonging to the current customer.
 
     Args:
         order_id: The order identifier, e.g. "ORD-000123".
@@ -276,7 +306,18 @@ def create_return_request(order_id: str, order_item_id: str, reason: str) -> str
     Returns:
         JSON describing the created return, or why it could not be created.
     """
-    eligibility = _check_return_eligibility(order_id, order_item_id)
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+    clean_order, clean_item, error = authorize_order_item(
+        order_id, order_item_id, config
+    )
+    if error:
+        return error
+
+    order_id, order_item_id = clean_order, clean_item
+
+    eligibility = _check_return_eligibility(order_id, order_item_id, config)
     try:
         parsed = json.loads(eligibility)
     except json.JSONDecodeError:
@@ -321,12 +362,12 @@ def create_return_request(order_id: str, order_item_id: str, reason: str) -> str
 
     row_data = execute_sql_query_params(
         """
-        SELECT oi.product_id, oi.customer_id,
+        SELECT oi.product_id,
                (oi.quantity * oi.unit_price) AS refund_amount
         FROM order_items oi
-        WHERE oi.order_id = %s AND oi.order_item_id = %s
+        WHERE oi.order_id = %s AND oi.order_item_id = %s AND oi.customer_id = %s
         """,
-        (order_id, order_item_id),
+        (order_id, order_item_id, customer_id),
     )
     if isinstance(row_data, str):
         return row_data
@@ -348,7 +389,10 @@ def create_return_request(order_id: str, order_item_id: str, reason: str) -> str
             order_id,
             order_item_id,
             item.get("product_id"),
-            item.get("customer_id"),
+            # The authenticated customer, never the row's own customer_id. If
+            # those two ever disagreed, writing the row's value would file the
+            # refund against whoever the row claimed to belong to.
+            customer_id,
             reason,
             "pending",
             float(item.get("refund_amount", 0.0)),
@@ -369,23 +413,33 @@ def create_return_request(order_id: str, order_item_id: str, reason: str) -> str
 
 
 @tool
-def get_return_status(return_id: str) -> str:
-    """Fetch current status details for a return request."""
-    if not _RETURN_ID_RE.match(return_id.strip()):
-        return "Invalid return_id format. Expected format like RET-000123."
+def get_return_status(return_id: str, config: RunnableConfig) -> str:
+    """Fetch current status of one of the customer's own return requests.
+
+    Only works for returns belonging to the current customer.
+
+    Args:
+        return_id: The return identifier, e.g. "RET-000123".
+    """
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+    cleaned, error = authorize_return(return_id, config)
+    if error:
+        return error
 
     rows = execute_sql_query_params(
         """
         SELECT return_id, order_id, order_item_id, status,
                refund_amount, request_date, reason
         FROM returns
-        WHERE return_id = %s
+        WHERE return_id = %s AND customer_id = %s
         """,
-        (return_id,),
+        (cleaned, customer_id),
     )
 
     if isinstance(rows, str):
         return rows
     if not rows:
-        return f"No return found for return_id={return_id}."
+        return f"No return found for return_id={cleaned}."
     return json.dumps(rows[0], indent=2, default=str)

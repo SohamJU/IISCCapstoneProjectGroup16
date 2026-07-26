@@ -6,10 +6,19 @@ import json
 from collections import Counter
 from typing import Any
 
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
+from src.agents.authz import require_customer_id
 from src.agents.recommendation_agent.config import DEFAULT_RECOMMENDATION_LIMIT
 from src.data.postgresql import execute_sql_query_params
+
+
+# NOTE: none of these tools take a customer_id parameter, deliberately. They
+# used to, which meant the model chose whose profile, order history and
+# purchase patterns to read — so a customer who mentioned someone else's ID
+# could pull that person's email and buying history. Identity now comes from
+# the injected ``config`` only; see :mod:`src.agents.authz`.
 
 
 def _safe_limit(limit: int) -> int:
@@ -17,8 +26,15 @@ def _safe_limit(limit: int) -> int:
 
 
 @tool
-def get_customer_profile(customer_id: str) -> str:
-    """Fetch profile information for a customer."""
+def get_customer_profile(config: RunnableConfig) -> str:
+    """Fetch the signed-in customer's own profile information.
+
+    Takes no arguments — it always reads the current customer's profile.
+    """
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+
     rows = execute_sql_query_params(
         """
         SELECT customer_id, first_name, last_name, email,
@@ -31,13 +47,23 @@ def get_customer_profile(customer_id: str) -> str:
     if isinstance(rows, str):
         return rows
     if not rows:
-        return f"No profile found for customer_id={customer_id}."
+        return "No profile found on this account."
     return json.dumps(rows[0], indent=2, default=str)
 
 
 @tool
-def get_customer_order_history(customer_id: str, limit: int = 20) -> str:
-    """Fetch recent customer order items with product context."""
+def get_customer_order_history(config: RunnableConfig, limit: int = 20) -> str:
+    """Fetch the signed-in customer's own recent order items with product context.
+
+    Takes no customer identifier — it always reads the current customer's history.
+
+    Args:
+        limit: How many recent order items to return (1-20).
+    """
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+
     safe_limit = _safe_limit(limit)
     rows = execute_sql_query_params(
         """
@@ -65,17 +91,29 @@ def get_customer_order_history(customer_id: str, limit: int = 20) -> str:
     if isinstance(rows, str):
         return rows
     if not rows:
-        return f"No order history found for customer_id={customer_id}."
+        return "No order history found on this account."
     return json.dumps(rows, indent=2, default=str)
 
 
 @tool
 def recommend_for_customer(
-    customer_id: str,
+    config: RunnableConfig,
     budget: float = 500.0,
     limit: int = DEFAULT_RECOMMENDATION_LIMIT,
 ) -> str:
-    """Generate personalized recommendations from profile + historical purchases."""
+    """Recommend products for the signed-in customer from their own history.
+
+    Takes no customer identifier — recommendations are always personalised to
+    the current customer.
+
+    Args:
+        budget: Maximum price per recommended product.
+        limit: How many products to recommend.
+    """
+    customer_id, error = require_customer_id(config)
+    if error:
+        return error
+
     safe_limit = _safe_limit(limit)
 
     customer_rows = execute_sql_query_params(
@@ -85,7 +123,7 @@ def recommend_for_customer(
     if isinstance(customer_rows, str):
         return customer_rows
     if not customer_rows:
-        return f"Unknown customer_id={customer_id}."
+        return "I couldn't find a profile on this account."
 
     history_rows = execute_sql_query_params(
         """
@@ -139,7 +177,6 @@ def recommend_for_customer(
         return "No recommendations found for the given budget and profile context."
 
     payload: dict[str, Any] = {
-        "customer_id": customer_id,
         "top_categories_from_history": top_categories,
         "recommendations": rec_rows,
     }

@@ -105,10 +105,22 @@ def test_route_labels_cover_every_specialist() -> None:
 # ══════════════════════════════════════════════════════════════════════════
 
 
-def test_scope_instruction_includes_customer_identity() -> None:
+def test_scope_instruction_states_customer_is_signed_in() -> None:
+    """The scope tells the model it is authenticated, not who to query as.
+
+    It used to interpolate the raw customer_id and instruct the model to "use
+    this directly in tool calls". Identity now travels out-of-band in the
+    RunnableConfig, so the ID no longer belongs in model-visible prose at all.
+    """
     scope = build_scope_instruction("order", customer_id="CUST-001")
-    assert "CUST-001" in scope
+    assert "CUST-001" not in scope
+    assert "signed in" in scope.lower()
     assert "never ask" in scope.lower()
+
+
+def test_scope_instruction_flags_unauthenticated_session() -> None:
+    scope = build_scope_instruction("order", customer_id=None)
+    assert "not signed in" in scope.lower()
 
 
 def test_scope_instruction_forwards_known_facts() -> None:
@@ -158,6 +170,7 @@ class _StubAgent:
         self.reply = reply if reply is not None else f"{name} handled it"
         self.last_scope = ""
         self.last_messages: list[Any] = []
+        self.last_customer_id: str | None = None
         self.calls = 0
 
     def run(
@@ -165,10 +178,12 @@ class _StubAgent:
         messages: list[Any],
         scope_instruction: str = "",
         history_window: int = 8,
+        customer_id: str | None = None,
     ) -> AgentResult:
         self.calls += 1
         self.last_scope = scope_instruction
         self.last_messages = list(messages)
+        self.last_customer_id = customer_id
         return AgentResult(name=self.name, text=self.reply, tool_calls=[f"{self.name}_tool"])
 
 

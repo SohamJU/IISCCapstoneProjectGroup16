@@ -27,7 +27,7 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from src.agents.common import limit_rows, reject_write_sql
+from src.agents.common import limit_rows, reject_write_sql, restrict_to_catalog_tables
 from src.data.postgresql import execute_sql_query, execute_sql_query_params
 from src.utils.logger import get_logger
 
@@ -326,6 +326,10 @@ def query_products(sql_query: str) -> str:
         JSON-formatted results, or an error/safety message.
     """
     allowed, error = reject_write_sql(sql_query)
+    if not allowed:
+        return error
+
+    allowed, error = restrict_to_catalog_tables(sql_query)
     if not allowed:
         return error
 

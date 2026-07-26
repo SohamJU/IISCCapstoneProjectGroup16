@@ -52,8 +52,8 @@ _ESCALATION_RE = re.compile(
 
 # An explicit order ID plus a tracking verb is unambiguous.
 _ORDER_FAST_RE = re.compile(
-    r"\bORD-\d{6}\b.*\b(track|status|where|deliver|cancel)\b"
-    r"|\b(track|status|where|deliver|cancel)\b.*\bORD-\d{6}\b",
+    r"\bORD-\d{6}\b.*\b(track|status|where|deliver|cancel|purchase[ds]?|buy|bought|order(ed)?|items?|contain)\b"
+    r"|\b(track|status|where|deliver|cancel|purchase[ds]?|buy|bought|items?|contain)\b.*\bORD-\d{6}\b",
     re.IGNORECASE,
 )
 _RETURN_FAST_RE = re.compile(r"\bRET-\d{6}\b", re.IGNORECASE)
@@ -65,7 +65,8 @@ which specialist agent(s) must handle the user's latest message.
 
 Available routes:
 - product         Product facts, specs, prices, comparisons, availability, reviews.
-- order           Placing, tracking, status, delivery dates, cancelling orders.
+- order           Placing, tracking, status, delivery dates, cancelling orders,
+                  and what a specific order contained.
 - return          Return/refund eligibility, policy, creating or tracking returns.
 - recommendation  Personalised suggestions based on the customer's history/profile.
 - escalation      Customer wants a human, or there is a legal/safety/fraud concern.
@@ -80,6 +81,9 @@ Rules:
   the route. If the previous turn was about escalation but the new message is
   a normal product question, route to product.
 - "Where is my order" is order, not product.
+- "What did I purchase/buy in ORD-000123" is order, NOT recommendation. A
+  question naming a specific order is a factual lookup of that order's
+  contents. Recommendation is only for "what should I buy next"-style asks.
 - Asking about the return *policy* is return. Asking whether an item is still
   cancellable is order.
 

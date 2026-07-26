@@ -88,9 +88,19 @@ def build_scope_instruction(
 
     if customer_id:
         parts.append(
-            f"CUSTOMER IDENTITY: The customer is authenticated as customer_id "
-            f"'{customer_id}'. Use this directly in tool calls. Never ask them "
-            f"for their customer ID or account details."
+            "CUSTOMER IDENTITY: The customer is signed in. Your tools already "
+            "know who they are and operate only on this customer's own records "
+            "— you do not pass a customer ID to them, and there is no way to "
+            "look up anyone else's orders or returns. Never ask the customer "
+            "for their customer ID or account details. If a tool says a record "
+            "is not on this account, relay that plainly; do not retry it, do "
+            "not guess other IDs, and never claim it belongs to someone else."
+        )
+    else:
+        parts.append(
+            "CUSTOMER IDENTITY: This session is NOT signed in. Order, return "
+            "and account tools are unavailable and will refuse. You can still "
+            "help with product search and general policy questions."
         )
 
     if facts:
@@ -210,7 +220,14 @@ def make_agent_node(route: str, agent: Any):
             facts=state.get("facts") or {},
         )
 
-        result = agent.run(state.get("messages") or [], scope_instruction=scope)
+        # customer_id goes in as a real argument, not just as prose inside
+        # `scope`. The prose tells the model who it is talking to; this is what
+        # the tools actually enforce against.
+        result = agent.run(
+            state.get("messages") or [],
+            scope_instruction=scope,
+            customer_id=state.get("customer_id"),
+        )
 
         if not result.ok:
             _LOGGER.warning("[%s] produced no usable answer: %s", route, result.error)

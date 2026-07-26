@@ -13,6 +13,7 @@ from src.agents.order_agent.tools import (
     cancel_order,
     get_order_status,
     list_customer_orders,
+    list_order_items,
     place_order,
     track_order,
 )
@@ -34,6 +35,10 @@ class OrderAgent(SpecialistAgent):
             tools=[
                 get_order_status,
                 track_order,
+                # "What did I buy in ORD-000123?" had no tool that could answer
+                # it — get_order_status returns shipment fields only, so the
+                # agent had to tell the customer it could not list their items.
+                list_order_items,
                 list_customer_orders,
                 cancel_order,
                 place_order,
