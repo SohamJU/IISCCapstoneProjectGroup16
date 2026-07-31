@@ -41,7 +41,6 @@ jobs:
 
       - name: Run unit tests
         run: pytest tests/ --cov=src
-        continue-on-error: true # Temporary
         env:
           POSTGRESQL_AIVEN_PASSWORD: ${{ secrets.POSTGRESQL_AIVEN_PASSWORD }}
           POSTGRESQL_CONNECTION_STRING: ${{ secrets.POSTGRESQL_CONNECTION_STRING }}
