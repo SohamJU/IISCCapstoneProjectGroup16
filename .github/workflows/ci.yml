@@ -41,3 +41,5 @@ jobs:
 
       - name: Run unit tests
         run: pytest tests/ --cov=src
+        env:
+          POSTGRESQL_AIVEN_PASSWORD: ${{ secrets.POSTGRESQL_AIVEN_PASSWORD }}
