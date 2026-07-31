@@ -125,10 +125,18 @@ def check_not_contains(forbidden: tuple[str, ...], answer: str) -> list[CheckRes
 
 
 def check_matches(patterns: tuple[str, ...], answer: str) -> list[CheckResult]:
+    # Matched against the normalised text as well as the raw text. Patterns are
+    # authored with straight apostrophes ("couldn't find") while models emit
+    # curly ones ("couldn’t find"), and reporting that as a wrong answer would
+    # be measuring typography.
+    normalised = _normalise(answer)
     results: list[CheckResult] = []
     for pattern in patterns:
         try:
-            matched = bool(re.search(pattern, answer, re.IGNORECASE))
+            matched = bool(
+                re.search(pattern, answer, re.IGNORECASE)
+                or re.search(pattern, normalised, re.IGNORECASE)
+            )
             detail = "" if matched else "pattern did not match"
         except re.error as exc:
             matched, detail = False, f"invalid regex: {exc}"

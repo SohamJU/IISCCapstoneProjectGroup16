@@ -20,11 +20,9 @@ from src.evaluation.fixtures import FixtureError, Fixtures, required_placeholder
 from src.evaluation.loader import AGENT_DATASETS, DATASET_DIR, load_raw_cases
 from src.evaluation.report import build_json_payload, format_console, format_markdown
 from src.evaluation.routing import (
-    AMBIGUOUS_INTENT_ROUTES,
-    CORE_INTENT_ROUTES,
-    RoutingReport,
-    RoutingSample,
+    RoutingCase,
     evaluate_routing,
+    load_routing_cases,
 )
 from src.evaluation.runner import run_agent_cases, run_case
 from src.evaluation.schema import AgentReport, CaseResult, Checks, EvalCase
@@ -120,6 +118,13 @@ def test_typographic_variation_does_not_fail_a_correct_answer() -> None:
     """Models emit non-breaking hyphens; that must not read as a wrong answer."""
     checks = Checks(must_contain=("ORD-000055", "1234.56"))
     results = run_checks(checks, "Order ORD‑000055 came to $1,234.56.", [])
+    assert all(r.passed for r in results), [r.name for r in results if not r.passed]
+
+
+def test_regex_checks_tolerate_curly_apostrophes() -> None:
+    """Patterns are written with ', models emit ’ — that is typography, not error."""
+    checks = Checks(must_match=(r"couldn't find",))
+    results = run_checks(checks, "I’m sorry, but I couldn’t find that product.", [])
     assert all(r.passed for r in results), [r.name for r in results if not r.passed]
 
 
@@ -357,83 +362,103 @@ class _StubRouter:
         return {"routes": list(self.routes), "confidences": {}, "reason": "stub"}
 
 
-def test_core_and_ambiguous_intents_do_not_overlap() -> None:
-    """An intent scored both ways would be double counted."""
-    assert not (set(CORE_INTENT_ROUTES) & set(AMBIGUOUS_INTENT_ROUTES))
-
-
-def test_core_intents_map_to_real_routes() -> None:
+def test_routing_dataset_is_valid_and_covers_every_route() -> None:
+    """The dataset is data, so it gets validated like data."""
     from src.agents.router.schemas import ROUTE_LABELS
 
-    for intent, route in CORE_INTENT_ROUTES.items():
-        assert route in ROUTE_LABELS, f"{intent} maps to unknown route {route}"
-    for intent, routes in AMBIGUOUS_INTENT_ROUTES.items():
-        assert routes <= ROUTE_LABELS, f"{intent} maps to unknown route(s)"
+    cases = load_routing_cases()
+    assert cases, "routing dataset is empty"
+
+    covered: set[str] = set()
+    for case in cases:
+        assert case.description, f"{case.id} has no description"
+        for route in (*case.expect_all, *case.expect_any, *case.forbid):
+            assert route in ROUTE_LABELS, f"{case.id} names unknown route {route}"
+        covered |= set(case.expect_all)
+
+    assert covered == set(ROUTE_LABELS), (
+        f"routing dataset does not exercise every route; missing "
+        f"{sorted(set(ROUTE_LABELS) - covered)}"
+    )
 
 
-def test_routing_scores_core_intent_correctly() -> None:
+def test_routing_dataset_includes_multi_intent_cases() -> None:
+    multi = [c for c in load_routing_cases() if c.is_multi_intent]
+    assert len(multi) >= 4, "too few multi-intent routing cases"
+
+
+def test_routing_case_must_assert_something() -> None:
+    with pytest.raises(ValueError, match="asserts nothing"):
+        RoutingCase.from_dict({"id": "x", "query": "q"})
+
+
+def _routing_case(**kwargs) -> RoutingCase:
+    defaults = {"id": "c1", "query": "q", "description": "d"}
+    return RoutingCase.from_dict({**defaults, **kwargs})
+
+
+def test_single_route_scored_correctly() -> None:
+    report = evaluate_routing(
+        _StubRouter(["order"]), [_routing_case(expect_all=["order"])], progress=False
+    )
+    assert report.accuracy == 1.0
+
+
+def test_wrong_route_is_a_miss() -> None:
+    report = evaluate_routing(
+        _StubRouter(["product"]), [_routing_case(expect_all=["order"])], progress=False
+    )
+    assert report.accuracy == 0.0
+    assert report.scored[0].missing == ["order"]
+
+
+def test_extra_route_is_tolerated_but_recorded() -> None:
+    """A second route can be a fair reading, but must not go unnoticed."""
+    report = evaluate_routing(
+        _StubRouter(["order", "product"]), [_routing_case(expect_all=["order"])], progress=False
+    )
+    assert report.accuracy == 1.0
+    assert report.scored[0].extra == ["product"]
+    assert report.over_routing_rate == 1.0
+
+
+def test_multi_intent_requires_every_route() -> None:
+    cases = [_routing_case(expect_all=["return", "order"])]
+    assert evaluate_routing(_StubRouter(["return", "order"]), cases, progress=False).accuracy == 1.0
+    # Getting only one of the two is a miss, not a half-pass.
+    partial = evaluate_routing(_StubRouter(["return"]), cases, progress=False)
+    assert partial.accuracy == 0.0
+    assert partial.scored[0].missing == ["order"]
+
+
+def test_forbidden_route_fails_the_case() -> None:
+    report = evaluate_routing(
+        _StubRouter(["order", "escalation"]),
+        [_routing_case(expect_all=["order"], forbid=["escalation"])],
+        progress=False,
+    )
+    assert report.accuracy == 0.0
+    assert report.scored[0].forbidden_hit == ["escalation"]
+
+
+def test_expect_any_accepts_either_option() -> None:
+    cases = [_routing_case(expect_any=["escalation", "fallback"])]
+    assert evaluate_routing(_StubRouter(["fallback"]), cases, progress=False).accuracy == 1.0
+    assert evaluate_routing(_StubRouter(["escalation"]), cases, progress=False).accuracy == 1.0
+    assert evaluate_routing(_StubRouter(["product"]), cases, progress=False).accuracy == 0.0
+
+
+def test_single_and_multi_intent_are_reported_separately() -> None:
     report = evaluate_routing(
         _StubRouter(["order"]),
-        [("where is my stuff", "order_tracking", "order_tracking")],
+        [
+            _routing_case(id="single", expect_all=["order"]),
+            _routing_case(id="multi", expect_all=["order", "product"]),
+        ],
         progress=False,
     )
-    assert report.core_accuracy == 1.0
-    assert not report.ambiguous
-
-
-def test_routing_counts_a_wrong_route_as_a_miss() -> None:
-    report = evaluate_routing(
-        _StubRouter(["product"]),
-        [("where is my stuff", "order_tracking", "order_tracking")],
-        progress=False,
-    )
-    assert report.core_accuracy == 0.0
-
-
-def test_multi_route_prediction_counts_when_gold_is_included() -> None:
-    """A compound query legitimately fans out; that is not an error."""
-    report = evaluate_routing(
-        _StubRouter(["return", "order"]),
-        [("return this and reorder", "order_tracking", "order_tracking")],
-        progress=False,
-    )
-    assert report.core_accuracy == 1.0
-
-
-def test_lenient_scoring_accepts_a_secondary_labelled_intent() -> None:
-    """Rows are multi-intent; strict scoring alone measures label choice.
-
-    A query labelled primary=product_comparison, all=product_comparison+returns
-    routed to `return` is a defensible read — strict counts it a miss, lenient
-    counts it a hit, and reporting both keeps the distinction visible.
-    """
-    report = evaluate_routing(
-        _StubRouter(["return"]),
-        [("it is defective and I want a better one", "product_comparison",
-          "product_comparison, returns")],
-        progress=False,
-    )
-    assert report.core_accuracy == 0.0
-    assert report.core_accuracy_lenient == 1.0
-
-
-def test_lenient_scoring_still_rejects_an_unlabelled_route() -> None:
-    report = evaluate_routing(
-        _StubRouter(["escalation"]),
-        [("find me a laptop", "product_search", "product_search")],
-        progress=False,
-    )
-    assert report.core_accuracy_lenient == 0.0
-
-
-def test_ambiguous_intent_scored_against_the_accepted_set() -> None:
-    report = evaluate_routing(
-        _StubRouter(["escalation"]),
-        [("my card was declined", "payment_issues", "payment_issues")],
-        progress=False,
-    )
-    assert not report.core                      # excluded from headline accuracy
-    assert report.ambiguous_acceptance == 1.0
+    assert report.single_intent == (1.0, 1)
+    assert report.multi_intent == (0.0, 1)
 
 
 def test_router_errors_are_tracked_and_excluded() -> None:
@@ -442,30 +467,36 @@ def test_router_errors_are_tracked_and_excluded() -> None:
             raise RuntimeError("json_validate_failed")
 
     report = evaluate_routing(
-        _BrokenRouter(),
-        [("q", "order_tracking", "order_tracking")],
-        progress=False,
+        _BrokenRouter(), [_routing_case(expect_all=["order"])], progress=False
     )
     assert len(report.errors) == 1
-    assert report.core_accuracy == 0.0  # no scorable samples, not a false 100%
+    assert report.accuracy == 0.0  # no scorable cases, not a false 100%
+
+
+def test_per_route_metrics_exclude_ambiguous_cases() -> None:
+    """Crediting a route for a choice among acceptable answers is meaningless."""
+    report = evaluate_routing(
+        _StubRouter(["order"]),
+        [
+            _routing_case(id="gold", expect_all=["order"]),
+            _routing_case(id="ambiguous", expect_any=["order", "fallback"]),
+        ],
+        progress=False,
+    )
+    assert report.per_route_metrics()["order"]["support"] == 1.0
 
 
 def test_per_route_metrics_and_confusion_are_computed() -> None:
-    report = RoutingReport(
-        core=[
-            RoutingSample("q1", "order_tracking", "order", ["order"], True),
-            RoutingSample("q2", "order_tracking", "order", ["product"], False),
-            RoutingSample("q3", "returns", "return", ["return"], True),
-        ]
+    report = evaluate_routing(
+        _StubRouter(["product"]),
+        [_routing_case(id="a", expect_all=["order"]), _routing_case(id="b", expect_all=["product"])],
+        progress=False,
     )
     metrics = report.per_route_metrics()
-    assert metrics["order"]["recall"] == pytest.approx(0.5)
-    assert metrics["order"]["precision"] == pytest.approx(1.0)
-    assert metrics["return"]["f1"] == pytest.approx(1.0)
-    # Confusion is keyed by gold ROUTE (not by intent), so the two
-    # order_tracking samples collapse into one "order" row.
+    assert metrics["order"]["recall"] == pytest.approx(0.0)
+    assert metrics["product"]["recall"] == pytest.approx(1.0)
+    assert metrics["product"]["precision"] == pytest.approx(0.5)
     assert report.confusion()["order"]["product"] == 1
-    assert report.confusion()["order"]["order"] == 1
 
 
 # ══════════════════════════════════════════════════════════════════════════

@@ -103,26 +103,25 @@ def _format_routing_section(routing: RoutingReport) -> str:
     """Render the routing block on its own, so --routing-only reads cleanly."""
     lines: list[str] = ["=" * 72, "INTENT ROUTING", "=" * 72, ""]
 
-    core_scored = [s for s in routing.core if not s.error]
-    lines.append(
-        f"Core accuracy      {routing.core_accuracy:>6.0%}  "
-        f"{_bar(routing.core_accuracy)}  (n={len(core_scored)})  strict: primary intent only"
-    )
-    lines.append(
-        f"  ... lenient      {routing.core_accuracy_lenient:>6.0%}  "
-        f"{_bar(routing.core_accuracy_lenient)}  any intent labelled on the row"
-    )
+    single_rate, single_n = routing.single_intent
+    multi_rate, multi_n = routing.multi_intent
 
-    ambiguous_scored = [s for s in routing.ambiguous if not s.error]
-    if ambiguous_scored:
+    lines.append(
+        f"Overall accuracy   {routing.accuracy:>6.0%}  "
+        f"{_bar(routing.accuracy)}  (n={len(routing.scored)})"
+    )
+    if single_n:
         lines.append(
-            f"Ambiguous accepted {routing.ambiguous_acceptance:>6.0%}  "
-            f"{_bar(routing.ambiguous_acceptance)}  (n={len(ambiguous_scored)})"
+            f"  single-intent    {single_rate:>6.0%}  {_bar(single_rate)}  (n={single_n})"
         )
+    if multi_n:
         lines.append(
-            "  (intents with no single correct route — billing, account, "
-            "loyalty, complaints)"
+            f"  multi-intent     {multi_rate:>6.0%}  {_bar(multi_rate)}  (n={multi_n})"
         )
+    lines.append(
+        f"Over-routing       {routing.over_routing_rate:>6.0%}  "
+        f"{_bar(routing.over_routing_rate)}  cases given an unrequested extra route"
+    )
 
     if routing.errors:
         lines.append(
@@ -143,14 +142,20 @@ def _format_routing_section(routing: RoutingReport) -> str:
             )
         lines.append("")
 
-    confusion = routing.confusion()
-    if confusion:
-        lines.append("Confusion (gold -> predicted):")
-        for gold in sorted(confusion):
-            predictions = ", ".join(
-                f"{route}:{count}" for route, count in confusion[gold].most_common()
+    misses = [r for r in routing.scored if not r.correct]
+    if misses:
+        lines.append(f"Misses ({len(misses)}):")
+        for result in misses:
+            reasons = []
+            if result.missing:
+                reasons.append(f"missed {result.missing}")
+            if result.forbidden_hit:
+                reasons.append(f"predicted forbidden {result.forbidden_hit}")
+            if not result.any_satisfied:
+                reasons.append(f"none of {list(result.case.expect_any)}")
+            lines.append(
+                f"  - {result.case.id:32} got {result.predicted} — {', '.join(reasons)}"
             )
-            lines.append(f"  {gold:<16} {predictions}")
         lines.append("")
 
     return "\n".join(lines)
@@ -231,30 +236,30 @@ def format_markdown(
             ]
 
     if routing is not None:
-        core_scored = [s for s in routing.core if not s.error]
-        ambiguous_scored = [s for s in routing.ambiguous if not s.error]
+        single_rate, single_n = routing.single_intent
+        multi_rate, multi_n = routing.multi_intent
         lines += [
             "## Intent routing",
             "",
-            "The labelled dataset uses 17 intents; this system has 6 routes. "
-            "Intents with exactly one defensible route form the core set and "
-            "produce the headline figure. Intents describing work this system "
-            "has no agent for (billing, account changes, loyalty, general "
-            "complaints) are scored against a set of acceptable routes and "
-            "reported separately.",
+            "Scored against a hand-authored dataset covering all six routes, "
+            "single- and multi-intent requests, boundary cases and requests "
+            "outside the agent taxonomy. Each case states exactly which routes "
+            "must be predicted, which are merely acceptable, and which are "
+            "forbidden.",
             "",
-            f"- **Core routing accuracy (strict): {routing.core_accuracy:.0%}** "
-            f"(n={len(core_scored)}) — the row's primary intent must be predicted.",
-            f"- Core routing accuracy (lenient): {routing.core_accuracy_lenient:.0%} "
-            f"— any intent listed in the row's `all_intents` is accepted. Most rows "
-            f"are genuinely multi-intent, so the strict figure partly measures which "
-            f"intent the dataset happened to nominate as primary.",
+            f"- **Overall accuracy: {routing.accuracy:.0%}** (n={len(routing.scored)})",
         ]
-        if ambiguous_scored:
+        if single_n:
+            lines.append(f"- Single-intent: {single_rate:.0%} (n={single_n})")
+        if multi_n:
             lines.append(
-                f"- Ambiguous-intent acceptance: {routing.ambiguous_acceptance:.0%} "
-                f"(n={len(ambiguous_scored)})"
+                f"- Multi-intent: {multi_rate:.0%} (n={multi_n}) — every required "
+                "route must appear in the prediction."
             )
+        lines.append(
+            f"- Over-routing: {routing.over_routing_rate:.0%} of cases were given "
+            "an extra route the case did not ask for."
+        )
         if routing.errors:
             lines.append(
                 f"- Router errors: {len(routing.errors)} (excluded from the above)"
@@ -316,17 +321,36 @@ def build_json_payload(
     }
 
     if routing is not None:
+        single_rate, single_n = routing.single_intent
+        multi_rate, multi_n = routing.multi_intent
         payload["routing"] = {
-            "core_accuracy": round(routing.core_accuracy, 4),
-            "core_accuracy_lenient": round(routing.core_accuracy_lenient, 4),
+            "accuracy": round(routing.accuracy, 4),
+            "n": len(routing.scored),
+            "single_intent_accuracy": round(single_rate, 4),
+            "single_intent_n": single_n,
+            "multi_intent_accuracy": round(multi_rate, 4),
+            "multi_intent_n": multi_n,
+            "over_routing_rate": round(routing.over_routing_rate, 4),
             "router_errors": len(routing.errors),
-            "core_n": len([s for s in routing.core if not s.error]),
-            "ambiguous_acceptance": round(routing.ambiguous_acceptance, 4),
-            "ambiguous_n": len([s for s in routing.ambiguous if not s.error]),
             "per_route": routing.per_route_metrics(),
             "confusion": {
-                gold: dict(counter) for gold, counter in routing.confusion().items()
+                route: dict(counter) for route, counter in routing.confusion().items()
             },
+            "results": [
+                {
+                    "id": r.case.id,
+                    "query": r.case.query,
+                    "expect_all": list(r.case.expect_all),
+                    "expect_any": list(r.case.expect_any),
+                    "forbid": list(r.case.forbid),
+                    "predicted": r.predicted,
+                    "correct": r.correct,
+                    "reused": r.reused,
+                    "error": r.error,
+                    "tags": list(r.case.tags),
+                }
+                for r in routing.results
+            ],
         }
 
     return payload

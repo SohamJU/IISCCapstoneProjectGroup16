@@ -145,6 +145,38 @@ def build_fixtures() -> Fixtures:
     values["OTHER_ORDER"] = str(other[0]["order_id"])
     values["OTHER_ORDER_ITEM"] = str(other[0]["order_item_id"])
 
+    # A delivered order: cancellation must be refused on status grounds, which
+    # is a different code path from the ownership refusal.
+    delivered = _rows(
+        """
+        SELECT order_id FROM orders
+        WHERE customer_id = %s AND LOWER(status) = 'delivered'
+        ORDER BY order_id LIMIT 1
+        """,
+        (customer_a,),
+    )
+    if delivered:
+        values["OWN_DELIVERED_ORDER"] = str(delivered[0]["order_id"])
+
+    # An order old enough to sit outside the return window, for the
+    # eligibility-expiry case.
+    # order_date is stored as TEXT in ISO form, so compare lexicographically
+    # rather than casting — a cast fails outright on any malformed row.
+    old_order = _rows(
+        """
+        SELECT o.order_id
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.order_id
+        WHERE o.customer_id = %s
+          AND o.order_date < TO_CHAR(CURRENT_DATE - INTERVAL '400 days', 'YYYY-MM-DD')
+        ORDER BY o.order_date
+        LIMIT 1
+        """,
+        (customer_a,),
+    )
+    if old_order:
+        values["OWN_OLD_ORDER"] = str(old_order[0]["order_id"])
+
     # A product that genuinely exists, for the catalog cases.
     product = _rows(
         """
@@ -191,13 +223,23 @@ def build_fixtures() -> Fixtures:
         values["OWN_RETURN"] = str(own_return[0]["return_id"])
 
     # An ID that is well-formed but deliberately absent, for "unknown order"
-    # cases. Derived by walking past the highest real order.
-    highest = _rows("SELECT order_id FROM orders ORDER BY order_id DESC LIMIT 1")
-    if highest:
-        digits = str(highest[0]["order_id"]).split("-")[-1]
-        values["MISSING_ORDER"] = f"ORD-{int(digits) + 5000:06d}"
+    # cases.
+    #
+    # Deliberately a FIXED candidate rather than one derived from the highest
+    # real order. The derived version moved every time an order was placed,
+    # which silently changed the question the case asks — invalidating recorded
+    # answers and making the dataset non-reproducible between runs.
+    for candidate in ("ORD-999999", "ORD-999998", "ORD-999997"):
+        existing = _rows(
+            "SELECT order_id FROM orders WHERE order_id = %s", (candidate,)
+        )
+        if not existing:
+            values["MISSING_ORDER"] = candidate
+            break
     else:
-        values["MISSING_ORDER"] = "ORD-999999"
+        raise FixtureError(
+            "could not find an unused order id for the 'unknown order' cases"
+        )
 
     _LOGGER.info("evaluation fixtures resolved: %s", sorted(values))
     return Fixtures(values=values)
