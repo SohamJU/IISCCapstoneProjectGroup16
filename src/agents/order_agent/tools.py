@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -26,6 +27,38 @@ _ADDRESS_MAX_CHARS = 300
 # cross-customer data leak.
 
 
+#: Conversational filler that surrounds a product name but never appears in a
+#: catalog title. Left in the AND-match these wreck it — no title contains
+#: "please" or "would". Category words like "laptop" are deliberately NOT here:
+#: in a product catalog they are exactly what discriminates a laptop from a
+#: laptop sleeve.
+_TITLE_STOPWORDS = frozenset(
+    {
+        "the", "and", "for", "with", "from", "this", "that", "these", "those",
+        "your", "our", "you", "one", "ones", "all", "please", "order", "buy",
+        "want", "wanted", "would", "like", "get", "second", "third", "first",
+        "fourth", "fifth", "last", "purchase", "me", "my", "it", "its",
+    }
+)
+
+#: Preferred floor when progressively relaxing a title match — below two terms
+#: a match stops being about the product the customer named. A name that
+#: yields only one usable term is still searched on that term; the floor is a
+#: preference, not a reason to return nothing.
+_MIN_TITLE_TERMS = 2
+
+
+def _title_terms(text: str) -> list[str]:
+    """Extract discriminating keywords from a product name.
+
+    The model passes titles copied out of its own previous message, which
+    arrive carrying markdown emphasis, quotes and punctuation.
+    """
+    tokens = re.findall(r"[A-Za-z0-9]+", text)
+    terms = [t for t in tokens if len(t) > 2 and t.lower() not in _TITLE_STOPWORDS]
+    return terms[:8]
+
+
 def _next_id(prefix: str, sql: str, width: int) -> str:
     """Generate next sequential ID by reading latest value from database."""
     rows = execute_sql_query_params(sql)
@@ -47,6 +80,123 @@ def _to_float(value: object) -> float:
         return float(value)
     except Exception:
         return 0.0
+
+
+@tool
+def find_product(product_name: str, limit: int = 5) -> str:
+    """Look up a product's internal ID from its name, so an order can be placed.
+
+    ALWAYS call this before place_order when you know WHAT the customer wants
+    but not its product_id — for example after recommending products, or when
+    the customer says "order the second one", "buy the Dell", "get me that
+    laptop".
+
+    `product_id` is an internal catalog key (an ASIN like B08XYZ1234). Customers
+    have never seen it and cannot look it up, so asking them for it is a dead
+    end. Resolve it here instead:
+      * exactly one match -> proceed, naming the product and price so the
+        customer can confirm what they are buying;
+      * several matches -> ask which one by PRODUCT NAME and price, never by ID;
+      * no matches -> say you could not find it and offer to search again.
+
+    Args:
+        product_name: The product title or description, as best you know it.
+            Copy the title from the earlier recommendation when there is one.
+        limit: Maximum candidates to return (1-10).
+
+    Returns:
+        JSON with the matching products (product_id, title, price, rating).
+    """
+    cleaned = (product_name or "").strip()
+    if not cleaned:
+        return "Please provide the product name to look up."
+
+    terms = _title_terms(cleaned)
+    if not terms:
+        # The model passed a bare reference ("the second one") instead of a
+        # title. The answer is in the conversation above, not with the customer.
+        return (
+            "That is a reference, not a product name — there is nothing to "
+            "search for in it. Look back at the products listed earlier in this "
+            "conversation, take the TITLE of the one the customer means, and "
+            "call this tool again with that title. Do NOT ask the customer for "
+            "a product ID."
+        )
+
+    safe_limit = max(1, min(int(limit), 10))
+
+    # Start with every keyword AND-ed, then relax one term at a time. A title
+    # copied verbatim from a recommendation matches on the first pass; a
+    # half-remembered "the Dell touchscreen one" needs the relaxed passes.
+    rows: list[dict[str, Any]] = []
+    used_terms: list[str] = []
+    # A name yielding fewer terms than the floor is still searched on what it
+    # has — otherwise "Dell" alone would silently return no matches.
+    floor = min(_MIN_TITLE_TERMS, len(terms))
+    for cutoff in range(len(terms), floor - 1, -1):
+        attempt = terms[:cutoff]
+        where = " AND ".join(["title ILIKE %s"] * len(attempt))
+        params: list[Any] = [f"%{term}%" for term in attempt]
+        params.append(safe_limit)
+
+        result = execute_sql_query_params(
+            f"""
+            SELECT product_id, title, price, average_rating, rating_count
+            FROM product_catalog
+            WHERE price IS NOT NULL AND price > 0 AND ({where})
+            ORDER BY rating_count DESC NULLS LAST, average_rating DESC NULLS LAST
+            LIMIT %s
+            """,
+            tuple(params),
+        )
+        if isinstance(result, str):
+            return result
+        if result:
+            rows, used_terms = result, attempt
+            break
+
+    if not rows:
+        return json.dumps(
+            {
+                "match_count": 0,
+                "searched_for": cleaned,
+                "guidance": (
+                    "No catalog product matched that name. Tell the customer you "
+                    "could not find it and offer to search for something similar. "
+                    "Do NOT ask them for a product ID."
+                ),
+            },
+            indent=2,
+        )
+
+    matches = [
+        {
+            "product_id": row.get("product_id"),
+            "title": row.get("title"),
+            "price": _to_float(row.get("price")),
+            "average_rating": _to_float(row.get("average_rating")),
+        }
+        for row in rows
+    ]
+
+    payload: dict[str, Any] = {
+        "match_count": len(matches),
+        "matched_on": used_terms,
+        "matches": matches,
+    }
+    if len(matches) == 1:
+        product = matches[0]
+        payload["guidance"] = (
+            f"Single match: '{product['title']}' at ${product['price']:.2f}. "
+            f"Use product_id {product['product_id']} in place_order. Confirm the "
+            f"product name and price with the customer — never show the ID."
+        )
+    else:
+        payload["guidance"] = (
+            "Multiple matches. Ask the customer which one by PRODUCT NAME and "
+            "price. Never show or request the product_id."
+        )
+    return json.dumps(payload, indent=2, default=str)
 
 
 @tool

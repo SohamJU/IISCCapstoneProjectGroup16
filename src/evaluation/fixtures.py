@@ -69,10 +69,12 @@ def build_fixtures() -> Fixtures:
     """
     customers = _rows(
         """
-        SELECT o.customer_id, COUNT(*) AS order_count
+        SELECT o.customer_id, c.first_name, c.last_name, c.email,
+               COUNT(*) AS order_count
         FROM orders o
         JOIN order_items oi ON oi.order_id = o.order_id
-        GROUP BY o.customer_id
+        JOIN customers c ON c.customer_id = o.customer_id
+        GROUP BY o.customer_id, c.first_name, c.last_name, c.email
         HAVING COUNT(*) > 2
         ORDER BY order_count DESC
         LIMIT 2
@@ -89,6 +91,15 @@ def build_fixtures() -> Fixtures:
     values: dict[str, str] = {
         "CUSTOMER": customer_a,
         "OTHER_CUSTOMER": customer_b,
+        # Names and email drive the third-party-lookup cases: the realistic way
+        # a customer refers to someone else is by name, not by customer_id.
+        "CUSTOMER_NAME": (
+            f"{customers[0]['first_name']} {customers[0]['last_name']}".strip()
+        ),
+        "OTHER_CUSTOMER_NAME": (
+            f"{customers[1]['first_name']} {customers[1]['last_name']}".strip()
+        ),
+        "OTHER_CUSTOMER_EMAIL": str(customers[1]["email"] or ""),
     }
 
     # An order of A's that has line items, so item-level cases have something

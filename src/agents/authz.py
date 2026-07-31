@@ -54,6 +54,9 @@ _LOGGER = get_logger(__name__)
 
 __all__ = [
     "NOT_AUTHENTICATED_MESSAGE",
+    "THIRD_PARTY_REFUSAL",
+    "account_holder_name",
+    "is_known_customer_name",
     "authorize_order",
     "authorize_order_item",
     "authorize_return",
@@ -72,6 +75,83 @@ NOT_AUTHENTICATED_MESSAGE = (
     "Please sign in and try again — I can still help with product questions "
     "and general policy in the meantime."
 )
+
+THIRD_PARTY_REFUSAL = (
+    "I can only access the account you're signed in to, so I can't look up "
+    "anyone else's orders, returns or account details — not by name, email or "
+    "any other identifier. If you'd like to see your own orders, just ask."
+)
+
+#: Cache of customer_id -> display name. The account holder's name is needed on
+#: every turn to prevent misattribution, and it never changes within a session.
+_NAME_CACHE: dict[str, str] = {}
+
+
+def account_holder_name(config: RunnableConfig | None) -> str:
+    """Return the signed-in customer's display name, or "" if unknown.
+
+    Exists because of a presentation bug rather than an access-control one:
+    asked for "the orders placed by Mason Smith" while signed in as someone
+    else, the agent correctly returned the *signed-in* customer's orders — and
+    then captioned them "the account for Mason Smith". No data crossed the
+    boundary, but the customer saw their own orders attributed to a stranger,
+    which reads exactly like a breach.
+
+    Telling the agent whose account it is actually holding lets it name the
+    right person, and lets :func:`detect_misattribution` verify that it did.
+    """
+    customer_id = current_customer_id(config)
+    if not customer_id:
+        return ""
+    if customer_id in _NAME_CACHE:
+        return _NAME_CACHE[customer_id]
+
+    rows = execute_sql_query_params(
+        "SELECT first_name, last_name FROM customers WHERE customer_id = %s",
+        (customer_id,),
+    )
+    if isinstance(rows, str) or not rows:
+        return ""
+
+    name = f"{rows[0].get('first_name') or ''} {rows[0].get('last_name') or ''}".strip()
+    if name:
+        _NAME_CACHE[customer_id] = name
+    return name
+
+
+#: Cache of candidate name -> "is this a real customer". Bounded by how many
+#: distinct names ever reach the attribution guard, which is very few.
+_KNOWN_NAME_CACHE: dict[str, bool] = {}
+
+
+def is_known_customer_name(candidate: str) -> bool:
+    """True when ``candidate`` matches a real customer's first and last name.
+
+    Used by the attribution guard to decide whether a name in a reply is a
+    person or a product. Matching on the word set rather than on the exact
+    string means "Mason Smith" and "Smith, Mason" both resolve, while
+    "Maytag Refrigerator Water" resolves to nobody and is left alone.
+    """
+    words = [w.lower() for w in re.findall(r"[A-Za-z]+", candidate)]
+    if len(words) < 2:
+        return False
+
+    key = " ".join(sorted(words))
+    if key in _KNOWN_NAME_CACHE:
+        return _KNOWN_NAME_CACHE[key]
+
+    rows = execute_sql_query_params(
+        """
+        SELECT 1
+        FROM customers
+        WHERE LOWER(first_name) = ANY(%s) AND LOWER(last_name) = ANY(%s)
+        LIMIT 1
+        """,
+        (words, words),
+    )
+    known = not isinstance(rows, str) and bool(rows)
+    _KNOWN_NAME_CACHE[key] = known
+    return known
 
 
 def _denied(kind: str, identifier: str) -> str:
