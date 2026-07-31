@@ -30,7 +30,9 @@ dev = [
     "ruff>=0.15.20",
     "mypy>=1.7.0",
     "pandas-stubs>=3.0.3.260530",
-    "types-psycopg2"
+    "types-psycopg2",
+    # Only needed by scripts/plot_evaluation_latency.py; nothing in src/ imports it.
+    "matplotlib>=3.11.0",
 ]
 
 [build-system]

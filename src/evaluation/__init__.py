@@ -6,7 +6,8 @@ Run it with::
     uv run python -m src.evaluation --agents order  # one agent
     uv run python -m src.evaluation --no-routing    # skip the router pass
 
-See ``src/evaluation/README.md`` for the case format and scoring rules.
+See the "Evaluation" section of the repository ``README.md`` for the case
+format and scoring rules.
 """
 
 from __future__ import annotations
