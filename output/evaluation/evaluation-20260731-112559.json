@@ -1,0 +1,687 @@
+{
+  "generated_at": "2026-07-31T11:25:59.960901+00:00",
+  "agents": {},
+  "overall": {
+    "cases": 0,
+    "passed": 0,
+    "pass_rate": 0.0
+  },
+  "routing": {
+    "accuracy": 0.9375,
+    "n": 32,
+    "single_intent_accuracy": 1.0,
+    "single_intent_n": 27,
+    "multi_intent_accuracy": 0.6,
+    "multi_intent_n": 5,
+    "over_routing_rate": 0.0,
+    "router_errors": 0,
+    "per_route": {
+      "escalation": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "fallback": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 3.0
+      },
+      "order": {
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1": 0.9473684210526316,
+        "support": 10.0
+      },
+      "product": {
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091,
+        "support": 6.0
+      },
+      "recommendation": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 4.0
+      },
+      "return": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6.0
+      }
+    },
+    "confusion": {
+      "product": {
+        "order": 1
+      },
+      "order": {
+        "escalation": 1
+      }
+    },
+    "results": [
+      {
+        "id": "order-tracking",
+        "query": "Where is my order ORD-000123?",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "order"
+        ]
+      },
+      {
+        "id": "order-cancel",
+        "query": "I want to cancel my order ORD-000123.",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "order"
+        ]
+      },
+      {
+        "id": "order-contents",
+        "query": "What did I purchase in order ORD-000123?",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "order"
+        ]
+      },
+      {
+        "id": "order-delivery-date",
+        "query": "When is my package going to arrive?",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "order"
+        ]
+      },
+      {
+        "id": "order-place-new",
+        "query": "I'd like to place an order for a new laptop stand.",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "order"
+        ]
+      },
+      {
+        "id": "return-damaged",
+        "query": "I received a damaged item and I want to return it.",
+        "expect_all": [
+          "return"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "return"
+        ]
+      },
+      {
+        "id": "return-policy",
+        "query": "What is your return policy for opened electronics?",
+        "expect_all": [
+          "return"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "return"
+        ]
+      },
+      {
+        "id": "return-refund-status",
+        "query": "What is the status of my refund RET-000042?",
+        "expect_all": [
+          "return"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "return"
+        ]
+      },
+      {
+        "id": "return-exchange",
+        "query": "This shirt is the wrong size, can I exchange it?",
+        "expect_all": [
+          "return"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "return"
+        ]
+      },
+      {
+        "id": "product-search-budget",
+        "query": "Show me wireless headphones under $250.",
+        "expect_all": [
+          "product"
+        ],
+        "expect_any": [],
+        "forbid": [
+          "recommendation"
+        ],
+        "predicted": [
+          "product"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "product",
+          "boundary"
+        ]
+      },
+      {
+        "id": "product-availability",
+        "query": "Do you have any 4K monitors in stock?",
+        "expect_all": [
+          "product"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "product"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "product"
+        ]
+      },
+      {
+        "id": "product-specs",
+        "query": "What are the specifications of the Sony WH-1000XM4?",
+        "expect_all": [
+          "product"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "product"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "product"
+        ]
+      },
+      {
+        "id": "product-compare",
+        "query": "Can you compare these two gaming laptops for me?",
+        "expect_all": [
+          "product"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "product"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "product"
+        ]
+      },
+      {
+        "id": "rec-history-based",
+        "query": "Based on my past orders, what should I buy next?",
+        "expect_all": [
+          "recommendation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "recommendation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "recommendation"
+        ]
+      },
+      {
+        "id": "rec-open-ended",
+        "query": "Recommend something for me.",
+        "expect_all": [
+          "recommendation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "recommendation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "recommendation"
+        ]
+      },
+      {
+        "id": "rec-complementary",
+        "query": "What goes well with the camera I bought last month?",
+        "expect_all": [
+          "recommendation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "recommendation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "recommendation"
+        ]
+      },
+      {
+        "id": "esc-human",
+        "query": "I want to speak to a human agent right now.",
+        "expect_all": [
+          "escalation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "escalation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "escalation"
+        ]
+      },
+      {
+        "id": "esc-legal",
+        "query": "This is fraud and I am contacting my lawyer.",
+        "expect_all": [
+          "escalation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "escalation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "escalation"
+        ]
+      },
+      {
+        "id": "esc-safety",
+        "query": "The charger you sold me caught fire and burned my desk.",
+        "expect_all": [
+          "escalation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "escalation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "escalation"
+        ]
+      },
+      {
+        "id": "fb-greeting",
+        "query": "Hi there!",
+        "expect_all": [
+          "fallback"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "fallback"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "fallback"
+        ]
+      },
+      {
+        "id": "fb-out-of-domain",
+        "query": "What's the weather in Bangalore tomorrow?",
+        "expect_all": [
+          "fallback"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "fallback"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "fallback"
+        ]
+      },
+      {
+        "id": "fb-thanks",
+        "query": "Thanks for all your help!",
+        "expect_all": [
+          "fallback"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "fallback"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "single-intent",
+          "fallback"
+        ]
+      },
+      {
+        "id": "multi-return-and-order",
+        "query": "I want to return my headphones and order the newer model instead.",
+        "expect_all": [
+          "return",
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return",
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "multi-intent"
+        ]
+      },
+      {
+        "id": "multi-order-and-product",
+        "query": "Where is my order ORD-000123, and do you sell a protective case for it?",
+        "expect_all": [
+          "order",
+          "product"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": false,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "multi-intent"
+        ]
+      },
+      {
+        "id": "multi-return-and-recommendation",
+        "query": "This blender arrived faulty. I'd like to send it back \u2014 and based on what I usually buy, what would you suggest instead?",
+        "expect_all": [
+          "return",
+          "recommendation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "return",
+          "recommendation"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "multi-intent"
+        ]
+      },
+      {
+        "id": "multi-order-and-escalation",
+        "query": "My order is two weeks late and I want to speak to a manager about it.",
+        "expect_all": [
+          "order",
+          "escalation"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "escalation"
+        ],
+        "correct": false,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "multi-intent"
+        ]
+      },
+      {
+        "id": "multi-product-and-order",
+        "query": "Which of your monitors is best for photo editing, and can I order it today?",
+        "expect_all": [
+          "product",
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [],
+        "predicted": [
+          "product",
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "multi-intent"
+        ]
+      },
+      {
+        "id": "boundary-cancellable",
+        "query": "Is it still possible to cancel order ORD-000123, or is it too late?",
+        "expect_all": [
+          "order"
+        ],
+        "expect_any": [],
+        "forbid": [
+          "return"
+        ],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "boundary"
+        ]
+      },
+      {
+        "id": "boundary-mild-annoyance",
+        "query": "The packaging was a bit annoying to open, but the product works fine.",
+        "expect_all": [],
+        "expect_any": [
+          "fallback",
+          "product",
+          "return"
+        ],
+        "forbid": [
+          "escalation"
+        ],
+        "predicted": [
+          "fallback"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "boundary",
+          "precision"
+        ]
+      },
+      {
+        "id": "boundary-history-mention",
+        "query": "I bought a tripod last year. Do you sell a carry bag for it?",
+        "expect_all": [],
+        "expect_any": [
+          "product",
+          "recommendation"
+        ],
+        "forbid": [],
+        "predicted": [
+          "product"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "boundary"
+        ]
+      },
+      {
+        "id": "outside-payment",
+        "query": "My card was declined when I tried to pay.",
+        "expect_all": [],
+        "expect_any": [
+          "escalation",
+          "fallback",
+          "order"
+        ],
+        "forbid": [],
+        "predicted": [
+          "order"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "out-of-taxonomy"
+        ]
+      },
+      {
+        "id": "outside-account-update",
+        "query": "I need to change the phone number on my account.",
+        "expect_all": [],
+        "expect_any": [
+          "escalation",
+          "fallback"
+        ],
+        "forbid": [],
+        "predicted": [
+          "fallback"
+        ],
+        "correct": true,
+        "reused": false,
+        "error": "",
+        "tags": [
+          "out-of-taxonomy"
+        ]
+      }
+    ]
+  }
+}

@@ -107,8 +107,7 @@ def test_build_conversation_history_aggregates_context() -> None:
     assert history_df.iloc[0]["turn_count"] == 2
     assert expected_customer_text in history_df.iloc[0]["conversation_text"]
     assert (
-        history_df.iloc[0]["latest_customer_text"]
-        == "My headphones stopped working."
+        history_df.iloc[0]["latest_customer_text"] == "My headphones stopped working."
     )
 
 

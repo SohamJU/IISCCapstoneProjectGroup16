@@ -3,5 +3,5 @@ exclude = [".git", "__pycache__", ".venv", "env", "venv", ".pytest_cache", "data
 target-version = "py312"
 
 [lint]
-ignore = ["E203"]
+ignore = ["E203", "C901", "E501"]
 select = ["E", "F", "W", "C90"]

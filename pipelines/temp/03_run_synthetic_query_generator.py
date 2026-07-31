@@ -4,7 +4,6 @@ from pathlib import Path
 from datetime import datetime
 
 
-
 """
 Synthetic Customer Query Generator
 
@@ -23,19 +22,43 @@ Returns a pandas DataFrame with synthetic queries and primary intent labels.
 # -----------------------------------------------------------------------------
 INTENT_VOCAB = {
     "product_search": ["looking for", "find a", "searching for", "do you carry"],
-    "product_recommendation": ["suggest a good", "recommendation for", "best option for"],
+    "product_recommendation": [
+        "suggest a good",
+        "recommendation for",
+        "best option for",
+    ],
     "product_comparison": ["vs", "difference between", "better choice compared to"],
     "order_tracking": ["where is my", "track status of", "has it shipped yet"],
-    "order_modification": ["change shipping address", "update items in", "modify my order"],
-    "order_cancellation": ["cancel my order", "stop shipment", "don't want this anymore"],
+    "order_modification": [
+        "change shipping address",
+        "update items in",
+        "modify my order",
+    ],
+    "order_cancellation": [
+        "cancel my order",
+        "stop shipment",
+        "don't want this anymore",
+    ],
     "returns": ["return this", "send back", "return policy for"],
     "refunds": ["get money back", "request a refund", "reimburse me for"],
-    "warranty_replacement": ["warranty claim", "replace broken item", "swap under warranty"],
+    "warranty_replacement": [
+        "warranty claim",
+        "replace broken item",
+        "swap under warranty",
+    ],
     "payment_issues": ["card declined", "charged twice", "payment failed at checkout"],
     "account_issues": ["cannot login", "reset password", "account locked"],
-    "discounts_offers": ["promo code not working", "apply coupon", "any active discounts"],
+    "discounts_offers": [
+        "promo code not working",
+        "apply coupon",
+        "any active discounts",
+    ],
     "complaints": ["terrible service", "very disappointed", "unacceptable quality"],
-    "delivery_issues": ["package stolen", "delivered to wrong house", "delayed shipment"]
+    "delivery_issues": [
+        "package stolen",
+        "delivered to wrong house",
+        "delayed shipment",
+    ],
 }
 
 ALL_INTENTS = list(INTENT_VOCAB.keys())
@@ -44,19 +67,30 @@ ALL_INTENTS = list(INTENT_VOCAB.keys())
 # DOMAIN VOCAB
 # -----------------------------------------------------------------------------
 PRODUCTS = [
-    "Bluetooth speaker", "wireless headphones", "laptop charger",
-    "smartphone case", "USB cable", "monitor", "keyboard", "mouse",
-    "webcam", "microphone"
+    "Bluetooth speaker",
+    "wireless headphones",
+    "laptop charger",
+    "smartphone case",
+    "USB cable",
+    "monitor",
+    "keyboard",
+    "mouse",
+    "webcam",
+    "microphone",
 ]
 
 PROBLEMS = [
-    "broken", "not working", "defective", "missing parts",
-    "wrong item", "poor quality", "scratched", "damaged"
+    "broken",
+    "not working",
+    "defective",
+    "missing parts",
+    "wrong item",
+    "poor quality",
+    "scratched",
+    "damaged",
 ]
 
-TIME_MARKERS = [
-    "yesterday", "2 days ago", "last week", "just now", "today"
-]
+TIME_MARKERS = ["yesterday", "2 days ago", "last week", "just now", "today"]
 
 # -----------------------------------------------------------------------------
 # PERSONAS & NOISE
@@ -73,8 +107,13 @@ TYPOS = {
 FILLERS = ["pls help", "need support", "urgent", "help asap", "??", "!!!", ""]
 
 TRANSITIONS = [
-    ". Also, ", ". Another thing, I also need to ", " and ", " as well as ", ". Can you also help me "
+    ". Also, ",
+    ". Another thing, I also need to ",
+    " and ",
+    " as well as ",
+    ". Can you also help me ",
 ]
+
 
 # -----------------------------------------------------------------------------
 # CORE STYLE FUNCTIONS
@@ -90,49 +129,94 @@ def build_query(
     Builds single or multi-sentence queries organically matching intents and personas.
     """
     sentences = []
-    
+
     # 1. Greetings & Context Setup
     if persona == "polite":
-        sentences.append(random.choice(["Hi there!", "Hello, hope you are doing well.", "Good day."]))
+        sentences.append(
+            random.choice(["Hi there!", "Hello, hope you are doing well.", "Good day."])
+        )
     elif persona == "confused":
-        sentences.append(random.choice(["I am completely lost.", "Not entirely sure how this works.", "Hey, I need some clarity."]))
+        sentences.append(
+            random.choice(
+                [
+                    "I am completely lost.",
+                    "Not entirely sure how this works.",
+                    "Hey, I need some clarity.",
+                ]
+            )
+        )
     elif persona == "angry":
-        sentences.append(random.choice(["This is unacceptable.", "I am highly annoyed.", "Unbelievable service."]))
+        sentences.append(
+            random.choice(
+                [
+                    "This is unacceptable.",
+                    "I am highly annoyed.",
+                    "Unbelievable service.",
+                ]
+            )
+        )
 
     # 2. Primary Intent Execution
     intent_1 = intent_set[0]
     action_phrase_1 = random.choice(INTENT_VOCAB[intent_1])
-    
+
     core_templates = [
         f"I am {action_phrase_1} the {product}.",
         f"Regarding the {product} I got {time_marker}, it is {problem} and I need to {action_phrase_1} it.",
         f"Can you help with my {product}? It's {problem} and I am looking to {action_phrase_1}.",
-        f"My {product} is {problem}. How do I handle {action_phrase_1}?"
+        f"My {product} is {problem}. How do I handle {action_phrase_1}?",
     ]
     primary_clause = random.choice(core_templates)
-    
+
     # 3. Secondary Intent Handling (Multi-Intent Mixing)
     if len(intent_set) > 1:
         intent_2 = intent_set[1]
         action_phrase_2 = random.choice(INTENT_VOCAB[intent_2])
         transition = random.choice(TRANSITIONS)
-        
+
         if transition.startswith("."):
             sentences.append(primary_clause)
-            sentences.append(f"{transition.strip('. ')} {action_phrase_2} for a different issue.")
+            sentences.append(
+                f"{transition.strip('. ')} {action_phrase_2} for a different issue."
+            )
         else:
-            primary_clause = primary_clause.rstrip(".") + f"{transition}{action_phrase_2}."
+            primary_clause = (
+                primary_clause.rstrip(".") + f"{transition}{action_phrase_2}."
+            )
             sentences.append(primary_clause)
     else:
         sentences.append(primary_clause)
 
     # 4. Closings & Sign-offs
     if persona in ["frustrated", "impatient", "angry"]:
-        sentences.append(random.choice(["Please resolve this immediately.", "Let me know ASAP!", "Waiting for your prompt response."]))
+        sentences.append(
+            random.choice(
+                [
+                    "Please resolve this immediately.",
+                    "Let me know ASAP!",
+                    "Waiting for your prompt response.",
+                ]
+            )
+        )
     elif persona == "polite":
-        sentences.append(random.choice(["Thank you for your assistance.", "Appreciate your time!", "Have a great day."]))
+        sentences.append(
+            random.choice(
+                [
+                    "Thank you for your assistance.",
+                    "Appreciate your time!",
+                    "Have a great day.",
+                ]
+            )
+        )
     elif persona == "confused":
-        sentences.append(random.choice(["Can you walk me through this step by step?", "What should my next step be?"]))
+        sentences.append(
+            random.choice(
+                [
+                    "Can you walk me through this step by step?",
+                    "What should my next step be?",
+                ]
+            )
+        )
 
     # 5. Persona Structural Shifts
     if persona == "impatient":
@@ -156,6 +240,7 @@ def build_query(
 
     return query.strip()
 
+
 # -----------------------------------------------------------------------------
 # MULTI-INTENT MIXER
 # -----------------------------------------------------------------------------
@@ -167,6 +252,7 @@ def sample_intents() -> list[str]:
         return [random.choice(ALL_INTENTS)]
     else:
         return random.sample(ALL_INTENTS, k=2)
+
 
 # -----------------------------------------------------------------------------
 # MAIN GENERATOR
@@ -184,17 +270,20 @@ def generate_synthetic_queries(total_queries: int = 50, seed: int = 42) -> pd.Da
 
         query = build_query(product, problem, persona, time_marker, intents)
 
-        rows.append({
-            "query": query,
-            "intent": intents[0],  # primary intent
-            "all_intents": ", ".join(intents),
-            "persona": persona,
-            "batch_id": 1
-        })
+        rows.append(
+            {
+                "query": query,
+                "intent": intents[0],  # primary intent
+                "all_intents": ", ".join(intents),
+                "persona": persona,
+                "batch_id": 1,
+            }
+        )
 
     df = pd.DataFrame(rows)
     df = df.drop_duplicates(subset=["query"]).reset_index(drop=True)
     return df
+
 
 # -----------------------------------------------------------------------------
 # SAVE FUNCTION
@@ -220,6 +309,7 @@ def save_synthetic_queries(df: pd.DataFrame, filename: str | None = None) -> Pat
     df.to_csv(output_path, index=False)
     return output_path
 
+
 # -----------------------------------------------------------------------------
 # RUNNER
 # -----------------------------------------------------------------------------
@@ -229,7 +319,7 @@ if __name__ == "__main__":
     print("--- Sample Generated Data ---")
     print(generated_df[["query", "intent", "persona"]].head(5).to_string(index=False))
     print("\n-----------------------------\n")
-    
+
     # 2. Save Output
     try:
         saved_file = save_synthetic_queries(generated_df)

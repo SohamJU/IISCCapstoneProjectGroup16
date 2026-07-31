@@ -16,9 +16,10 @@ dependencies = [
     "langchain-openai>=0.3.0",
     "langchain-core>=0.3.0",
     "langgraph>=1.2.0",
+    "pinecone>=7.3.0",
+    "sentence-transformers>=3.1.0",
+    "gradio>=5.0.0",
     "openai",
-    "faker",
-    "google-genai",
     "ipykernel>=7.3.0",
 ]
 
@@ -29,5 +30,15 @@ dev = [
     "ruff>=0.15.20",
     "mypy>=1.7.0",
     "pandas-stubs>=3.0.3.260530",
-    "types-psycopg2"
+    "types-psycopg2",
+    # Only needed by scripts/plot_evaluation_latency.py; nothing in src/ imports it.
+    "matplotlib>=3.11.0",
 ]
+
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
