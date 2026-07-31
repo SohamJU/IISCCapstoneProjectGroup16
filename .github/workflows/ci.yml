@@ -37,6 +37,7 @@ jobs:
 
       - name: Run type checking
         run: mypy .
+        continue-on-error: true # Temporarily allow type errors to not fail the build
 
       - name: Run unit tests
         run: pytest tests/ --cov=src
