@@ -288,6 +288,31 @@ def test_graph_shares_facts_between_agents_in_one_turn() -> None:
     assert "ORD-000123" in agents["order"].last_scope
 
 
+def test_graph_shares_facts_when_the_id_carries_a_unicode_hyphen() -> None:
+    """Regression for "find my latest order and return it".
+
+    Models write order numbers with U+2011 NON-BREAKING HYPHEN. The fact
+    extractor matched an ASCII hyphen, so it found nothing and the second
+    agent was handed an empty fact set — it then asked the customer for the
+    order number the first agent had just reported.
+    """
+    agents = _stub_specialists(
+        **{
+            "order": _StubAgent(
+                "order", reply="Your most recent order is **ORD‑006762**."
+            )
+        }
+    )
+    _run_graph(["order", "return"], "Find my latest order and return it", agents)
+
+    scope = agents["return"].last_scope
+    assert "ORD-006762" in scope, (
+        "the return agent was not told the order id the order agent resolved"
+    )
+    # Handed on in ASCII form, or the next agent's tools would reject it.
+    assert "‑" not in scope
+
+
 def test_graph_scope_is_a_system_message_not_user_text() -> None:
     """Regression: subtask scoping used to be concatenated onto the user turn.
 

@@ -30,6 +30,7 @@ from src.agents.llm import get_router_llm
 from src.agents.router.config import HISTORY_TURNS_FOR_ROUTING, MAX_ROUTES_PER_TURN
 from src.agents.router.schemas import ROUTE_LABELS, RouteDecision
 from src.utils.logger import get_logger
+from src.utils.text import normalise_typography
 
 _LOGGER = get_logger(__name__)
 
@@ -154,14 +155,21 @@ class RouterAgent:
         if not ok:
             return self._decision(["fallback"], 0.0, "invalid_input")
 
+        # Normalised for the keyword patterns below. A customer who copies an
+        # order number out of an earlier reply pastes it back carrying U+2011
+        # rather than an ASCII hyphen, which every pattern here would miss.
+        # Only the fast paths see the normalised form; the LLM gets the
+        # original text.
+        probe = normalise_typography(user_message)
+
         # Safety override — current message only.
-        if _ESCALATION_RE.search(user_message):
+        if _ESCALATION_RE.search(probe):
             return self._decision(["escalation"], 0.98, "keyword_safety")
 
         # Cheap deterministic fast paths that skip the LLM round-trip.
-        if _RETURN_FAST_RE.search(user_message):
+        if _RETURN_FAST_RE.search(probe):
             return self._decision(["return"], 0.95, "keyword_fastpath")
-        if _ORDER_FAST_RE.search(user_message):
+        if _ORDER_FAST_RE.search(probe):
             return self._decision(["order"], 0.95, "keyword_fastpath")
 
         if not self.use_llm_fallback or self._llm is None:

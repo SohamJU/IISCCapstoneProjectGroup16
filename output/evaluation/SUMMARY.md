@@ -1,6 +1,6 @@
 # Evaluation Summary
 
-_Generated 2026-07-31 11:34 UTC_
+_Generated 2026-07-31 11:55 UTC_
 
 ## Headline
 
@@ -79,6 +79,8 @@ Scoring is deterministic. Each case asserts checkable properties — which tools
 Agents are evaluated directly rather than through the supervisor graph, so a failure is attributable to the agent rather than to routing. Routing is measured separately against the labelled query dataset.
 
 94 of the scored cases reused an answer recorded in an earlier run rather than calling the model again, to stay within the provider's quota. Checks were re-applied fresh to every stored answer; only the answer text was reused, and a changed question always forces a new call.
+
+**Caveat:** 55 of those reused answers were recorded before the current agent code. They are reported as measured, but a clean run (`--no-cache`) is needed to confirm them.
 
 ## What these numbers do not show
 

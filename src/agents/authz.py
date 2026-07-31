@@ -49,6 +49,7 @@ from langchain_core.runnables import RunnableConfig
 
 from src.data.postgresql import execute_sql_query_params
 from src.utils.logger import get_logger
+from src.utils.text import normalise_typography
 
 _LOGGER = get_logger(__name__)
 
@@ -154,6 +155,16 @@ def is_known_customer_name(candidate: str) -> bool:
     return known
 
 
+def _clean_identifier(raw: str) -> str:
+    """Normalise an identifier arriving from the model.
+
+    The model frequently passes back an id it read from an earlier turn, where
+    it had written the hyphen as U+2011. Without this the format check rejects
+    a perfectly valid order number as malformed.
+    """
+    return normalise_typography(raw or "").strip().upper()
+
+
 def _denied(kind: str, identifier: str) -> str:
     """Uniform refusal for 'no such record' and 'not yours' alike.
 
@@ -208,7 +219,7 @@ def authorize_order(
     if error:
         return "", error
 
-    cleaned = (order_id or "").strip().upper()
+    cleaned = _clean_identifier(order_id)
     if not _ORDER_ID_RE.match(cleaned):
         return "", "Invalid order_id format. Expected something like ORD-000123."
 
@@ -245,8 +256,8 @@ def authorize_order_item(
     if error:
         return "", "", error
 
-    clean_order = (order_id or "").strip().upper()
-    clean_item = (order_item_id or "").strip().upper()
+    clean_order = _clean_identifier(order_id)
+    clean_item = _clean_identifier(order_item_id)
     if not _ORDER_ID_RE.match(clean_order):
         return "", "", "Invalid order_id format. Expected something like ORD-000123."
     if not _ORDER_ITEM_ID_RE.match(clean_item):
@@ -295,7 +306,7 @@ def authorize_return(
     if error:
         return "", error
 
-    cleaned = (return_id or "").strip().upper()
+    cleaned = _clean_identifier(return_id)
     if not _RETURN_ID_RE.match(cleaned):
         return "", "Invalid return_id format. Expected something like RET-000123."
 

@@ -25,6 +25,7 @@ from src.agents.authz import (
 )
 from src.agents.common import validate_user_input
 from src.agents.graph.state import SupportState
+from src.utils.text import normalise_typography
 from src.agents.llm import get_synthesis_llm
 from src.agents.router import RouterAgent
 from src.utils.logger import get_logger
@@ -492,10 +493,18 @@ def _extract_facts(text: str) -> dict[str, Any]:
     Cheap and deliberately conservative — only well-formed IDs are carried
     forward, so a later specialist in the same turn does not re-ask for an
     order number the previous one already resolved.
+
+    The text is typography-normalised first. Models write order numbers with
+    U+2011 NON-BREAKING HYPHEN ("ORD‑006762"), which is visually identical to
+    an ASCII hyphen and matches none of the patterns below. Skipping this step
+    silently broke every hand-off between specialists: "find my latest order
+    and return it" resolved the order, extracted no fact from the answer, and
+    then asked the customer for the order id they had just been given.
     """
+    normalised = normalise_typography(text)
     facts: dict[str, Any] = {}
     for key, pattern in _FACT_PATTERNS.items():
-        match = pattern.search(text)
+        match = pattern.search(normalised)
         if match:
             facts[key] = match.group(0).upper()
     return facts
