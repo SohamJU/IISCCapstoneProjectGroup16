@@ -43,3 +43,4 @@ jobs:
         run: pytest tests/ --cov=src
         env:
           POSTGRESQL_AIVEN_PASSWORD: ${{ secrets.POSTGRESQL_AIVEN_PASSWORD }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
