@@ -14,9 +14,37 @@ uv run python -m src.evaluation --tags security      # only cross-account cases
 uv run python -m src.evaluation --fail-under 0.8     # non-zero exit under 80%
 ```
 
-Every run prints a summary and writes `output/evaluation/evaluation-<stamp>.md`
-plus a `.json` alongside it (`latest.md` always points at the most recent run).
-`--no-write-report` prints without writing.
+Every run prints a summary and writes three things to `output/evaluation/`:
+`evaluation-<stamp>.md`, the matching `.json`, and **`SUMMARY.md`** — the
+consolidated, presentable view with all metrics, dimension breakdowns and
+stated limitations. `--no-write-report` prints without writing.
+
+## Answer reuse (staying inside the API quota)
+
+Answers are cached in `output/evaluation/answer-cache.json` and reused instead
+of asking the model the same question again. The first run also seeds the cache
+from any existing `evaluation-*.json` reports, so answers already paid for are
+not paid for twice.
+
+What is cached is the **answer and tools called** — never the score. Checks are
+re-applied fresh on every run, so tightening a rubric or adding a check to an
+existing case costs nothing. Only a change to the *question* (the query text or
+the identity it is asked under) forces a new call, because only that changes
+what the model would say.
+
+Two safeguards keep reuse honest:
+
+- **Reused failures are re-verified live.** A stored answer can be stale — a
+  fixture-derived value in the question may have moved since it was recorded —
+  and a stale answer produces a failure for a test the current system would
+  pass. Any reused case that fails is re-run before being reported, so only
+  failures pay that cost. This is not hypothetical: it caught two false
+  failures caused by `{MISSING_ORDER}` shifting when a new order was placed.
+- **Staleness is reported, not hidden.** Each entry records a fingerprint of
+  the agent source tree, and the run states how many reused answers predate the
+  current code.
+
+Use `--no-cache` for a clean measurement with no reuse at all.
 
 **Cost — read this before a full run.** Each case is one live agent invocation
 against the LLM provider and the database. A full run is ~43 agent calls plus
@@ -133,31 +161,39 @@ visible rather than quietly inflating the pass rate.
 
 ## Routing evaluation
 
-`customer_queries` holds 878 rows labelled with **17 intents**; this system has
-**6 routes**. The mapping is not clean, and collapsing it into one number would
-be misleading, so the two are scored separately:
+Scored against `datasets/routing.jsonl` — 32 hand-authored cases covering all
+six routes, multi-intent requests, boundary cases and requests outside the
+agent taxonomy.
 
-- **Core accuracy (headline).** Eleven intents map to exactly one defensible
-  route (`order_tracking` → order, `refunds` → return, …). A prediction counts
-  as correct when the gold route is among the predicted routes, since a
-  compound query legitimately fans out to two specialists.
-- **Ambiguous acceptance (reported separately).** Six intents describe support
-  work this system has no agent for — billing disputes, account changes,
-  loyalty, general complaints. There is no single right answer, only a set of
-  defensible ones, so they are scored against that set and excluded from the
-  headline figure.
+This replaced the generated `customer_queries` table, which labelled 878 rows
+with 17 intents against this system's 6 routes. Two problems made it unusable:
+its labels were unreliable (queries labelled `product_search` read *"it is
+missing parts and I need to..."*, which is a return), and a third of the rows
+described work the system has no agent for. Scoring against it measured label
+noise as much as router quality.
 
-Reporting one number over all 878 rows would either punish the router for
-lacking a billing agent or flatter it for guessing inside a set of equally
-acceptable answers.
+Each case declares what a correct decision is:
 
-Sampling is stratified per intent (`--routing-per-intent`, default 3) with a
-fixed seed, because the raw distribution is skewed and a plain random sample
-under-represents rare intents.
+| Field | Meaning |
+|---|---|
+| `expect_all` | Every listed route must be predicted |
+| `expect_any` | At least one must be predicted (genuinely ambiguous requests) |
+| `forbid` | None of these may be predicted |
 
-Per-route precision/recall/F1 and a gold-route → predicted-route confusion
-matrix are computed by hand rather than via sklearn, so the harness carries no
-extra dependency and can score multi-route predictions correctly.
+Three figures are reported:
+
+- **Overall accuracy** — all constraints on the case satisfied.
+- **Single- vs multi-intent** split. Multi-intent is the harder measure: every
+  required route must appear, so getting one of two is a miss, not a half-pass.
+- **Over-routing rate** — how often an unrequested extra route was added. A
+  router that always answered with two routes would otherwise score well by
+  covering every possibility; this is the counterweight.
+
+Per-route precision/recall/F1 is multi-label and computed by hand (no sklearn
+dependency), over cases with a single unambiguous gold set only — crediting a
+route for a choice among equally acceptable answers would be meaningless.
+
+Routing predictions are cached like agent answers, so re-runs cost nothing.
 
 ## Adding a case
 

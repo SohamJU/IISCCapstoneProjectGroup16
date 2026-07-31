@@ -15,9 +15,17 @@ import re
 from typing import Any
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 
+from src.agents.attribution import detect_misattribution, detect_third_party_request
+from src.agents.authz import (
+    THIRD_PARTY_REFUSAL,
+    account_holder_name,
+    is_known_customer_name,
+)
 from src.agents.common import validate_user_input
 from src.agents.graph.state import SupportState
+from src.utils.text import normalise_typography
 from src.agents.llm import get_synthesis_llm
 from src.agents.router import RouterAgent
 from src.utils.logger import get_logger
@@ -87,14 +95,26 @@ def build_scope_instruction(
     parts: list[str] = [_SCOPE_INSTRUCTIONS.get(route, _SCOPE_INSTRUCTIONS["fallback"])]
 
     if customer_id:
+        holder = account_holder_name({"configurable": {"customer_id": customer_id}})
+        whose = f" You are acting on the account of {holder}." if holder else ""
         parts.append(
-            "CUSTOMER IDENTITY: The customer is signed in. Your tools already "
-            "know who they are and operate only on this customer's own records "
-            "— you do not pass a customer ID to them, and there is no way to "
-            "look up anyone else's orders or returns. Never ask the customer "
+            "CUSTOMER IDENTITY: The customer is signed in." + whose + " Your tools "
+            "already know who they are and operate only on this customer's own "
+            "records — you do not pass a customer ID to them, and there is no way "
+            "to look up anyone else's orders or returns. Never ask the customer "
             "for their customer ID or account details. If a tool says a record "
             "is not on this account, relay that plainly; do not retry it, do "
             "not guess other IDs, and never claim it belongs to someone else."
+        )
+        parts.append(
+            "THIRD-PARTY REQUESTS: If the customer asks about ANOTHER person's "
+            "orders, returns or account — naming them, or giving an email or "
+            "customer ID — refuse. Say you can only access the account they are "
+            "signed in to. Do NOT run a tool and present the results as that "
+            "other person's data: your tools always return the signed-in "
+            "customer's own records, so labelling them with someone else's name "
+            "would be false. Never describe results as belonging to anyone other "
+            + (f"than {holder}." if holder else "than the signed-in customer.")
         )
     else:
         parts.append(
@@ -124,6 +144,27 @@ def guardrail_node(state: SupportState) -> dict[str, Any]:
     ok, error = validate_user_input(user_message)
     if not ok:
         return {"direct_response": error}
+
+    # Refuse third-party account lookups here rather than trusting each agent
+    # to decline. Left to the prompt the behaviour was inconsistent: the same
+    # question sometimes drew a refusal and sometimes silently returned the
+    # signed-in customer's own orders, which reads as though the data belongs
+    # to the person the customer named.
+    customer_id = state.get("customer_id")
+    if customer_id:
+        holder = account_holder_name({"configurable": {"customer_id": customer_id}})
+        if holder:
+            other = detect_third_party_request(
+                user_message, holder, is_known_customer=is_known_customer_name
+            )
+            if other:
+                _LOGGER.warning(
+                    "third-party lookup refused: session=%s asked about %r",
+                    state.get("session_id"),
+                    other,
+                )
+                return {"direct_response": THIRD_PARTY_REFUSAL}
+
     return {"direct_response": ""}
 
 
@@ -296,7 +337,7 @@ def make_synthesis_node():
 
         # Single specialist — its answer is already the whole reply.
         if len(outputs) == 1:
-            text = outputs[0][1].strip()
+            text = _guard_attribution(outputs[0][1].strip(), state)
             return {"final_response": text, "messages": [AIMessage(content=text)]}
 
         # Multiple specialists — merge into one voice.
@@ -347,9 +388,42 @@ def make_synthesis_node():
         if not merged:
             merged = "\n\n".join(text for _, text in outputs)
 
+        merged = _guard_attribution(merged, state)
         return {"final_response": merged, "messages": [AIMessage(content=merged)]}
 
     return synthesis_node
+
+
+def _guard_attribution(response: str, state: SupportState) -> str:
+    """Replace a reply that credits the customer's data to someone else.
+
+    The access-control layer already guarantees the *data* belongs to the
+    signed-in customer; this catches the reply that labels it with a third
+    party's name. Substituting the whole reply loses a turn, but showing
+    someone their own orders under a stranger's name is far worse: it is
+    indistinguishable from a breach and implies third-party lookup works.
+    """
+    customer_id = state.get("customer_id")
+    if not customer_id or not response.strip():
+        return response
+
+    config: RunnableConfig = {"configurable": {"customer_id": customer_id}}
+    holder = account_holder_name(config)
+    if not holder:
+        return response
+
+    offending = detect_misattribution(
+        response, holder, is_known_customer=is_known_customer_name
+    )
+    if not offending:
+        return response
+
+    _LOGGER.error(
+        "attribution guard replaced a reply attributing data to %r (session %s)",
+        offending,
+        state.get("session_id"),
+    )
+    return THIRD_PARTY_REFUSAL
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -419,10 +493,18 @@ def _extract_facts(text: str) -> dict[str, Any]:
     Cheap and deliberately conservative — only well-formed IDs are carried
     forward, so a later specialist in the same turn does not re-ask for an
     order number the previous one already resolved.
+
+    The text is typography-normalised first. Models write order numbers with
+    U+2011 NON-BREAKING HYPHEN ("ORD‑006762"), which is visually identical to
+    an ASCII hyphen and matches none of the patterns below. Skipping this step
+    silently broke every hand-off between specialists: "find my latest order
+    and return it" resolved the order, extracted no fact from the answer, and
+    then asked the customer for the order id they had just been given.
     """
+    normalised = normalise_typography(text)
     facts: dict[str, Any] = {}
     for key, pattern in _FACT_PATTERNS.items():
-        match = pattern.search(text)
+        match = pattern.search(normalised)
         if match:
             facts[key] = match.group(0).upper()
     return facts

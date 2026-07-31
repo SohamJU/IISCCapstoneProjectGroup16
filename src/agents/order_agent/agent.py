@@ -11,6 +11,7 @@ from src.agents.order_agent.config import MAX_REACT_ITERATIONS
 from src.agents.order_agent.prompts import build_system_prompt
 from src.agents.order_agent.tools import (
     cancel_order,
+    find_product,
     get_order_status,
     list_customer_orders,
     list_order_items,
@@ -41,6 +42,11 @@ class OrderAgent(SpecialistAgent):
                 list_order_items,
                 list_customer_orders,
                 cancel_order,
+                # place_order needs a product_id, which the customer has never
+                # seen. Without a way to resolve a product NAME to that key the
+                # agent had no option but to ask them for it — so "order the
+                # second one" after a recommendation dead-ended.
+                find_product,
                 place_order,
                 # Order agents field "can I still cancel?" and "when will it
                 # arrive?" constantly. Without this they had no grounded source

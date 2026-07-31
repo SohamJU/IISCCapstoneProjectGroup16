@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 
 from src.evaluation.schema import CheckResult, Checks
+from src.utils.text import normalise_typography
 
 #: Identifiers the agents deal in. Used by the hallucination guard to find any
 #: order/return number the answer mentions.
@@ -41,25 +42,19 @@ _REFUSAL_PATTERN = re.compile(
 
 
 def _normalise(text: str) -> str:
-    """Fold the typographic variation LLM output introduces.
+    """Fold the typographic variation LLM output introduces, then lowercase.
 
     Models routinely emit non-breaking hyphens and smart quotes, so a literal
     ``"ORD-000055" in answer`` check fails against an answer that visibly reads
-    ``ORD‑000055``. Normalising here stops the harness reporting cosmetic
-    Unicode differences as substantive failures.
+    ``ORD-000055`` with U+2011. Normalising here stops the harness reporting
+    cosmetic Unicode differences as substantive failures.
+
+    Shares :func:`~src.utils.text.normalise_typography` with the agents, which
+    need the same fold for a stronger reason: the identical Unicode hyphen
+    broke identifier hand-off between specialists at runtime, not merely in
+    scoring.
     """
-    replacements = {
-        "‐": "-", "‑": "-", "‒": "-", "–": "-",
-        "—": "-", "―": "-", "−": "-",
-        "‘": "'", "’": "'", "“": '"', "”": '"',
-        " ": " ", " ": " ", " ": " ",
-    }
-    for source, target in replacements.items():
-        text = text.replace(source, target)
-    # Collapse thousands separators so "1,234.56" matches a ground truth of
-    # "1234.56" and vice versa.
-    text = re.sub(r"(?<=\d),(?=\d{3}\b)", "", text)
-    return text.lower()
+    return normalise_typography(text, strip_thousands=True).lower()
 
 
 def check_expected_tools(expected: tuple[str, ...], actual: list[str]) -> list[CheckResult]:
@@ -125,10 +120,18 @@ def check_not_contains(forbidden: tuple[str, ...], answer: str) -> list[CheckRes
 
 
 def check_matches(patterns: tuple[str, ...], answer: str) -> list[CheckResult]:
+    # Matched against the normalised text as well as the raw text. Patterns are
+    # authored with straight apostrophes ("couldn't find") while models emit
+    # curly ones ("couldn’t find"), and reporting that as a wrong answer would
+    # be measuring typography.
+    normalised = _normalise(answer)
     results: list[CheckResult] = []
     for pattern in patterns:
         try:
-            matched = bool(re.search(pattern, answer, re.IGNORECASE))
+            matched = bool(
+                re.search(pattern, answer, re.IGNORECASE)
+                or re.search(pattern, normalised, re.IGNORECASE)
+            )
             detail = "" if matched else "pattern did not match"
         except re.error as exc:
             matched, detail = False, f"invalid regex: {exc}"

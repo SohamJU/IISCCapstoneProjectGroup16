@@ -142,6 +142,9 @@ class CaseResult:
     latency_seconds: float = 0.0
     error: str = ""
     skipped: str = ""
+    #: True when the answer came from the cache rather than a fresh model call.
+    #: The score is still computed fresh; only the answer was reused.
+    reused: bool = False
 
     @property
     def infrastructure_error(self) -> bool:
@@ -226,11 +229,21 @@ class AgentReport:
         return sum(r.checks_passed for r in self.executed) / total
 
     @property
+    def reused(self) -> list[CaseResult]:
+        """Cases scored from a stored answer instead of a fresh model call."""
+        return [r for r in self.executed if r.reused]
+
+    @property
     def mean_latency(self) -> float:
-        executed = [r for r in self.executed if r.latency_seconds > 0]
-        if not executed:
+        """Mean latency over freshly executed cases only.
+
+        Reused cases carry the latency of whenever they were first recorded, so
+        averaging them in would describe a run that never happened.
+        """
+        fresh = [r for r in self.executed if not r.reused and r.latency_seconds > 0]
+        if not fresh:
             return 0.0
-        return sum(r.latency_seconds for r in executed) / len(executed)
+        return sum(r.latency_seconds for r in fresh) / len(fresh)
 
     @property
     def errored(self) -> list[CaseResult]:
