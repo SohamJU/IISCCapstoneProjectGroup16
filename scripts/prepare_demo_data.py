@@ -51,7 +51,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from src.data.postgresql import execute_sql_query, execute_sql_query_params, execute_sql_write
+from src.data.postgresql import (
+    execute_sql_query,
+    execute_sql_query_params,
+    execute_sql_write,
+)
 
 BACKUP_TABLE = "demo_date_backup"
 
@@ -168,9 +172,7 @@ def apply_changes(candidates: list[dict], dry_run: bool) -> None:
 
 def revert() -> int:
     """Restore every order recorded in the backup table."""
-    backed_up = _rows(
-        execute_sql_query(f"SELECT order_id FROM {BACKUP_TABLE}")
-    )
+    backed_up = _rows(execute_sql_query(f"SELECT order_id FROM {BACKUP_TABLE}"))
     if not backed_up:
         print("Nothing to revert — backup table is empty or absent.")
         return 0
@@ -218,7 +220,9 @@ def show_demo_ready() -> None:
         return
     for r in rows:
         kind = "single-item" if r["items"] == 1 else f"{r['items']}-item"
-        print(f"  {r['order_id']}  {str(r['customer_name'])[:26]:<26} {kind:<12} {r['order_date']}")
+        print(
+            f"  {r['order_id']}  {str(r['customer_name'])[:26]:<26} {kind:<12} {r['order_date']}"
+        )
         print(f"      customer_id: {r['customer_id']}")
 
 
@@ -228,7 +232,9 @@ def main() -> int:
     )
     parser.add_argument("--apply", action="store_true", help="Write the changes.")
     parser.add_argument("--revert", action="store_true", help="Restore original dates.")
-    parser.add_argument("--count", type=int, default=6, help="Orders to shift (default 6).")
+    parser.add_argument(
+        "--count", type=int, default=6, help="Orders to shift (default 6)."
+    )
     args = parser.parse_args()
 
     if args.revert:

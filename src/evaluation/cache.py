@@ -120,7 +120,10 @@ class AnswerCache:
             for agent, block in (payload.get("agents") or {}).items():
                 for result in block.get("results") or []:
                     # Skipped and provider-error records carry no usable answer.
-                    if result.get("skipped") or not (result.get("answer") or "").strip():
+                    if (
+                        result.get("skipped")
+                        or not (result.get("answer") or "").strip()
+                    ):
                         continue
                     entries[cls._key(agent, str(result.get("id")))] = {
                         "agent": agent,
@@ -196,7 +199,9 @@ class AnswerCache:
             "error": "",
         }
 
-    def put_raw(self, agent: str, case: Any, answer: str, tools_used: list[str] | None = None) -> None:
+    def put_raw(
+        self, agent: str, case: Any, answer: str, tools_used: list[str] | None = None
+    ) -> None:
         """Record an answer for anything case-shaped.
 
         Used by the routing evaluation, whose "answer" is the serialised list of

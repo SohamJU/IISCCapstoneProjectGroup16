@@ -47,8 +47,8 @@ _SUBSTITUTIONS = {
     " ": " ",  # figure space
     " ": " ",  # thin space
     " ": " ",  # narrow no-break space
-    "​": "",   # zero-width space
-    "﻿": "",   # zero-width no-break space
+    "​": "",  # zero-width space
+    "﻿": "",  # zero-width no-break space
 }
 
 _TRANSLATION = str.maketrans(_SUBSTITUTIONS)

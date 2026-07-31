@@ -79,10 +79,9 @@ class SupportOrchestrator:
             _LOGGER.warning("Session table init failed, persistence disabled: %s", exc)
 
         if deterministic_mode is None:
-            deterministic_mode = (
-                os.getenv("SUPPORT_DETERMINISTIC_MODE", "false").strip().lower()
-                in {"1", "true", "yes", "on"}
-            )
+            deterministic_mode = os.getenv(
+                "SUPPORT_DETERMINISTIC_MODE", "false"
+            ).strip().lower() in {"1", "true", "yes", "on"}
 
         self.deterministic_mode = bool(deterministic_mode)
         self.auto_fallback_on_agent_init_error = auto_fallback_on_agent_init_error
@@ -133,9 +132,7 @@ class SupportOrchestrator:
         """Populate the LLM-free fallback agents."""
         self.degraded_reason = reason
         self._deterministic_agents = {
-            route: DeterministicSupportAgent(
-                route, reason=reason, debug=self.debug
-            )
+            route: DeterministicSupportAgent(route, reason=reason, debug=self.debug)
             for route in (
                 "product",
                 "order",
@@ -249,7 +246,11 @@ class SupportOrchestrator:
             try:
                 # Wipe the checkpointed message list for this thread.
                 self._graph.update_state(
-                    {"configurable": {"thread_id": self._thread_id(session_id, customer_id)}},
+                    {
+                        "configurable": {
+                            "thread_id": self._thread_id(session_id, customer_id)
+                        }
+                    },
                     {"messages": [], "facts": {}, "agent_outputs": []},
                 )
             except Exception as exc:
@@ -265,7 +266,10 @@ class SupportOrchestrator:
     ) -> OrchestratorResponse:
         """Serve a turn without any LLM calls."""
         route = self.router.route(user_message)
-        agent = self._deterministic_agents.get(route) or self._deterministic_agents["fallback"]
+        agent = (
+            self._deterministic_agents.get(route)
+            or self._deterministic_agents["fallback"]
+        )
         response_text = agent.chat(user_message)
 
         self._persist_turn(session_id, customer_id, user_message, response_text)
@@ -291,7 +295,9 @@ class SupportOrchestrator:
         if self._graph is None:
             return
 
-        config = {"configurable": {"thread_id": self._thread_id(session_id, customer_id)}}
+        config = {
+            "configurable": {"thread_id": self._thread_id(session_id, customer_id)}
+        }
         try:
             existing = self._graph.get_state(config)
             if existing.values.get("messages"):

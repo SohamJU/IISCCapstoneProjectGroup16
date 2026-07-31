@@ -1,31 +1,31 @@
 """Tests for customer session persistence functionality."""
 
-import pytest
-from datetime import datetime
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+import pytest
 
-from src.memory.conversation_memory import ConversationMemory, ConversationTurn
-from src.memory.persistent_session_manager import PersistentSessionManager
 from src.data.session_persistence import (
-    initialize_sessions_table,
-    save_session_to_db,
-    get_customer_session_history,
-    load_session_from_db,
     close_session,
     delete_old_sessions_for_customer,
+    get_customer_session_history,
     get_session_count_for_customer,
+    initialize_sessions_table,
+    load_session_from_db,
+    save_session_to_db,
 )
+from src.memory.conversation_memory import ConversationMemory
+from src.memory.persistent_session_manager import PersistentSessionManager
 from src.utils.customer_history import (
-    format_session_summary,
-    format_customer_history_context,
     enrich_message_with_history,
-    get_customer_topics_from_history,
+    format_customer_history_context,
+    format_session_summary,
     get_customer_sentiment_summary,
+    get_customer_topics_from_history,
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
 
 class TestSessionPersistence:
@@ -295,7 +295,9 @@ class TestCustomerHistoryUtils:
         )
 
         assert "Can you help?" in enriched
-        assert "Recent Conversation History" in enriched or len(enriched) > len("Can you help?")
+        assert "Recent Conversation History" in enriched or len(enriched) > len(
+            "Can you help?"
+        )
 
     def test_get_customer_topics(self):
         """Test extracting customer topics."""

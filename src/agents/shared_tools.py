@@ -45,7 +45,9 @@ def _search_policies_pinecone(query: str, top_k: int) -> str | None:
         if matches:
             return format_matches(matches)
     except Exception as exc:
-        _LOGGER.debug("Pinecone policy retrieval unavailable, using local index: %s", exc)
+        _LOGGER.debug(
+            "Pinecone policy retrieval unavailable, using local index: %s", exc
+        )
     return None
 
 

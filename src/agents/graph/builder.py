@@ -140,7 +140,9 @@ def build_support_graph(
 
     supervisor_targets: dict[str, str] = {route: route for route in available_routes}
     supervisor_targets["synthesize"] = "synthesize"
-    builder.add_conditional_edges("supervisor", route_after_supervisor, supervisor_targets)
+    builder.add_conditional_edges(
+        "supervisor", route_after_supervisor, supervisor_targets
+    )
 
     # Every specialist returns to the supervisor, which either dispatches the
     # next pending route or moves on to synthesis.

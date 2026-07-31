@@ -20,5 +20,9 @@ DEFAULT_RETRIEVAL_TOP_K = int(os.getenv("DEFAULT_RETRIEVAL_TOP_K", "5"))
 MAX_RETRIEVAL_TOP_K = int(os.getenv("MAX_RETRIEVAL_TOP_K", "10"))
 
 # Debugging
-DEBUG = os.getenv("SUPPORT_DEBUG", "false").strip().lower() in {"1", "true", "yes", "on"}
-
+DEBUG = os.getenv("SUPPORT_DEBUG", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}

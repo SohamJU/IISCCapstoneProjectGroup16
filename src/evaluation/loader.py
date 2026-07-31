@@ -28,14 +28,18 @@ def load_raw_cases(path: Path) -> list[dict]:
         raise FileNotFoundError(f"dataset not found: {path}")
 
     cases: list[dict] = []
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
         stripped = line.strip()
         if not stripped or stripped.startswith("//"):
             continue
         try:
             cases.append(json.loads(stripped))
         except json.JSONDecodeError as exc:
-            raise ValueError(f"{path.name} line {number}: invalid JSON — {exc}") from exc
+            raise ValueError(
+                f"{path.name} line {number}: invalid JSON — {exc}"
+            ) from exc
     return cases
 
 
@@ -101,7 +105,10 @@ def load_cases(
         missing = _case_placeholders(raw) - set(fixtures.values)
         if missing:
             unavailable.append(
-                (str(raw.get("id", "<unnamed>")), f"no data for {', '.join(sorted(missing))}")
+                (
+                    str(raw.get("id", "<unnamed>")),
+                    f"no data for {', '.join(sorted(missing))}",
+                )
             )
             continue
         cases.append(_resolve_case(raw, fixtures))

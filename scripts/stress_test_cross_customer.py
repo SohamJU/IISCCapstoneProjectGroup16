@@ -118,7 +118,9 @@ def build_probes(victim: Party) -> list[tuple[str, str]]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--limit", type=int, default=0, help="Run only the first N probes.")
+    parser.add_argument(
+        "--limit", type=int, default=0, help="Run only the first N probes."
+    )
     args = parser.parse_args()
 
     attacker, victim = load_parties()

@@ -26,9 +26,9 @@ import sys
 from pathlib import Path
 
 # Fix unicode encode errors on Windows
-if sys.stdout.encoding.lower() != 'utf-8':
+if sys.stdout.encoding.lower() != "utf-8":
     try:
-        sys.stdout.reconfigure(encoding='utf-8')  # type: ignore[union-attr]
+        sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[union-attr]
     except AttributeError:
         pass
 
@@ -53,6 +53,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP RUNNERS
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def step_01_download(force: bool, max_reviews: int, streaming: bool) -> None:
     """Step 1: Download Amazon Reviews 2023 data."""
@@ -171,6 +172,7 @@ def step_12_upload_postgres(force: bool, behavior: str | None) -> None:
 
     run(force=force, behavior=behavior)
 
+
 def step_13_test_postgres() -> None:
     """Step 13: Test PostgreSQL Upload."""
     print("\n" + "=" * 70)
@@ -181,10 +183,10 @@ def step_13_test_postgres() -> None:
     run()
 
 
-
 # ═══════════════════════════════════════════════════════════════════════════
 # INTEGRITY VALIDATION
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def _run_validation() -> None:  # noqa: C901
     """Run all 13 integrity checks from the plan."""
@@ -301,15 +303,16 @@ def _run_validation() -> None:  # noqa: C901
 
         # C8: return.product_id matches an item in that order
         ret_items = returns.merge(
-            items[["order_id", "product_id"]]
-            .rename(columns={"product_id": "item_pid"}),
+            items[["order_id", "product_id"]].rename(
+                columns={"product_id": "item_pid"}
+            ),
             on="order_id",
             how="left",
         )
         # Check if return's product_id appears among that order's items
-        ret_items["pid_match"] = (
-            ret_items["product_id"].astype(str) == ret_items["item_pid"].astype(str)
-        )
+        ret_items["pid_match"] = ret_items["product_id"].astype(str) == ret_items[
+            "item_pid"
+        ].astype(str)
         matched_returns = ret_items.groupby("return_id")["pid_match"].any()
         unmatched = (~matched_returns).sum()
         _check(
@@ -378,9 +381,7 @@ def _run_validation() -> None:  # noqa: C901
     # ── Check 11: request_date > actual_delivery_date ──────────────────
     if RETURNS_PATH.exists() and ORDERS_PATH.exists():
         returns = pd.read_csv(RETURNS_PATH, usecols=["order_id", "request_date"])
-        orders = pd.read_csv(
-            ORDERS_PATH, usecols=["order_id", "actual_delivery_date"]
-        )
+        orders = pd.read_csv(ORDERS_PATH, usecols=["order_id", "actual_delivery_date"])
         merged = returns.merge(orders, on="order_id", how="left")
         merged["request_date"] = pd.to_datetime(merged["request_date"], errors="coerce")
         merged["actual_delivery_date"] = pd.to_datetime(
@@ -454,6 +455,7 @@ def _run_validation() -> None:  # noqa: C901
 # ═══════════════════════════════════════════════════════════════════════════
 # CLI
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(

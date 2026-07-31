@@ -160,7 +160,9 @@ class SpecialistAgent:
                 break
 
         if self.debug:
-            _LOGGER.debug("[%s] tools=%s output=%s", self.name, tool_calls, final_text[:300])
+            _LOGGER.debug(
+                "[%s] tools=%s output=%s", self.name, tool_calls, final_text[:300]
+            )
 
         valid, guardrail_message = validate_agent_output(final_text)
         if not valid:
@@ -192,11 +194,12 @@ class SpecialistAgent:
         if not ok:
             return error
 
-        result = self.run(
-            [HumanMessage(content=user_message)], customer_id=customer_id
-        )
+        result = self.run([HumanMessage(content=user_message)], customer_id=customer_id)
         if not result.ok:
-            return result.error or "I wasn't able to generate a response. Please try again."
+            return (
+                result.error
+                or "I wasn't able to generate a response. Please try again."
+            )
         return result.text
 
     def reset_memory(self) -> None:
@@ -215,7 +218,11 @@ class SpecialistAgent:
         names: list[str] = []
         for message in messages:
             for call in getattr(message, "tool_calls", None) or []:
-                name = call.get("name") if isinstance(call, dict) else getattr(call, "name", None)
+                name = (
+                    call.get("name")
+                    if isinstance(call, dict)
+                    else getattr(call, "name", None)
+                )
                 if name:
                     names.append(str(name))
         return names

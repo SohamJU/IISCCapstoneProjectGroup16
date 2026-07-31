@@ -52,10 +52,43 @@ _STOPWORDS = frozenset(
 
 # Query words that hint at a policy area, used to boost the right document.
 _AREA_HINTS: dict[str, tuple[str, ...]] = {
-    "return_policy": ("return", "returns", "refund", "refunds", "exchange", "restock", "rma"),
-    "shipping_policy": ("ship", "shipping", "delivery", "deliver", "courier", "tracking", "dispatch"),
-    "warranty_policy": ("warranty", "guarantee", "repair", "defect", "defective", "faulty", "coverage"),
-    "payment_policy": ("payment", "pay", "card", "invoice", "billing", "charge", "emi", "installment"),
+    "return_policy": (
+        "return",
+        "returns",
+        "refund",
+        "refunds",
+        "exchange",
+        "restock",
+        "rma",
+    ),
+    "shipping_policy": (
+        "ship",
+        "shipping",
+        "delivery",
+        "deliver",
+        "courier",
+        "tracking",
+        "dispatch",
+    ),
+    "warranty_policy": (
+        "warranty",
+        "guarantee",
+        "repair",
+        "defect",
+        "defective",
+        "faulty",
+        "coverage",
+    ),
+    "payment_policy": (
+        "payment",
+        "pay",
+        "card",
+        "invoice",
+        "billing",
+        "charge",
+        "emi",
+        "installment",
+    ),
 }
 
 
@@ -75,7 +108,9 @@ class PolicySection:
 
 def _tokenize(text: str) -> list[str]:
     """Lowercase, split on non-alphanumerics, drop stopwords."""
-    return [t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS and len(t) > 1]
+    return [
+        t for t in _TOKEN_RE.findall(text.lower()) if t not in _STOPWORDS and len(t) > 1
+    ]
 
 
 def _split_sections(doc_name: str, raw: str) -> list[PolicySection]:

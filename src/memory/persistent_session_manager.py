@@ -18,7 +18,7 @@ from src.data.session_persistence import (
 class PersistentSessionManager(InMemorySessionManager):
     """
     Enhanced SessionManager that persists conversations to PostgreSQL.
-    
+
     This extends the in-memory SessionManager to automatically save sessions
     to the database, supporting customer history retrieval and session limits.
     """
@@ -26,24 +26,26 @@ class PersistentSessionManager(InMemorySessionManager):
     def __init__(self, persist_to_db: bool = True) -> None:
         """
         Initialize the persistent session manager.
-        
+
         Args:
             persist_to_db: Whether to persist sessions to PostgreSQL (default: True)
         """
         super().__init__()
         self.persist_to_db = persist_to_db
 
-    def get_or_create_session(self, session_id: str, customer_id: str | None = None) -> ConversationMemory:
+    def get_or_create_session(
+        self, session_id: str, customer_id: str | None = None
+    ) -> ConversationMemory:
         """
         Fetch an existing session or create a new one.
-        
+
         If persist_to_db is True, attempts to load from database first,
         otherwise creates new in-memory session.
-        
+
         Args:
             session_id: Unique identifier for the session
             customer_id: (Optional) Customer identifier for persistence
-        
+
         Returns:
             ConversationMemory object for the session
         """
@@ -74,18 +76,20 @@ class PersistentSessionManager(InMemorySessionManager):
     ) -> ConversationMemory:
         """
         Append a turn to a session and save to database.
-        
+
         Args:
             session_id: Session identifier
             role: Role of the speaker (e.g., "user", "assistant")
             text: Message text
             metadata: Optional metadata for the turn
             customer_id: Optional customer ID for persistence
-        
+
         Returns:
             Updated ConversationMemory object
         """
-        session = super().append_turn(session_id, role=role, text=text, metadata=metadata)
+        session = super().append_turn(
+            session_id, role=role, text=text, metadata=metadata
+        )
 
         # Persist to database if enabled and customer_id provided
         if self.persist_to_db and customer_id:
@@ -96,7 +100,7 @@ class PersistentSessionManager(InMemorySessionManager):
     def close_session(self, session_id: str, customer_id: str | None = None) -> None:
         """
         Close a session and mark it as inactive in the database.
-        
+
         Args:
             session_id: Session identifier
             customer_id: Optional customer ID for cleanup
@@ -118,11 +122,11 @@ class PersistentSessionManager(InMemorySessionManager):
     ) -> list[dict[str, object]]:
         """
         Retrieve recent conversation sessions for a customer.
-        
+
         Args:
             customer_id: Customer identifier
             limit: Maximum number of sessions to retrieve (default: 5)
-        
+
         Returns:
             List of session summaries with conversation_turns, created_at, etc.
         """
@@ -131,13 +135,15 @@ class PersistentSessionManager(InMemorySessionManager):
 
         return get_customer_session_history(customer_id, limit=limit)
 
-    def get_last_session_for_customer(self, customer_id: str) -> Optional[dict[str, object]]:
+    def get_last_session_for_customer(
+        self, customer_id: str
+    ) -> Optional[dict[str, object]]:
         """
         Retrieve the most recent session for a customer.
-        
+
         Args:
             customer_id: Customer identifier
-        
+
         Returns:
             Most recent session summary or None if no sessions exist
         """

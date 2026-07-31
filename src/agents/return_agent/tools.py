@@ -82,7 +82,9 @@ def lookup_return_policy(query: str) -> str:
         lines = text.splitlines()
         for line in lines:
             line_lower = line.lower()
-            if query_lower in line_lower or any(term in line_lower for term in query_terms):
+            if query_lower in line_lower or any(
+                term in line_lower for term in query_terms
+            ):
                 best_matches.append({"source": name, "line": line.strip()})
                 if len(best_matches) >= 8:
                     return json.dumps(best_matches, indent=2)
@@ -229,7 +231,10 @@ def _check_return_eligibility(
     order_status = str(row.get("order_status", "")).lower()
     item_status = str(row.get("item_status", "")).lower()
 
-    if order_status in {"cancelled", "returned"} or item_status in {"cancelled", "returned"}:
+    if order_status in {"cancelled", "returned"} or item_status in {
+        "cancelled",
+        "returned",
+    }:
         return json.dumps(
             {
                 "eligible": False,

@@ -176,7 +176,9 @@ class RouterAgent:
             return self._decision(
                 ["fallback"],
                 0.30,
-                f"router_llm_unavailable ({self.init_error})" if self.init_error else "router_llm_disabled",
+                f"router_llm_unavailable ({self.init_error})"
+                if self.init_error
+                else "router_llm_disabled",
             )
 
         prompt: list[tuple[str, str]] = [("system", _ROUTER_SYSTEM_PROMPT)]
@@ -194,7 +196,9 @@ class RouterAgent:
             decision = self._llm.invoke(prompt)
         except Exception as exc:
             _LOGGER.error("Router LLM call failed: %s", exc)
-            return self._decision(["fallback"], 0.0, f"router_error: {type(exc).__name__}")
+            return self._decision(
+                ["fallback"], 0.0, f"router_error: {type(exc).__name__}"
+            )
 
         if not isinstance(decision, RouteDecision):  # defensive
             return self._decision(["fallback"], 0.0, "router_bad_payload")
@@ -209,7 +213,9 @@ class RouterAgent:
 
         routes = self._normalise_routes(decision.routes)
         if not routes:
-            return self._decision(["fallback"], max(decision.confidence, 0.5), "llm_no_valid_route")
+            return self._decision(
+                ["fallback"], max(decision.confidence, 0.5), "llm_no_valid_route"
+            )
 
         return {
             "routes": routes,
@@ -223,7 +229,9 @@ class RouterAgent:
         multi = self.classify_multi(user_message, history=history)
         routes = multi.get("routes") or ["fallback"]
         confidences = multi.get("confidences") or {}
-        first_route = str(routes[0]) if isinstance(routes, list) and routes else "fallback"
+        first_route = (
+            str(routes[0]) if isinstance(routes, list) and routes else "fallback"
+        )
         first_conf = 0.0
         if isinstance(confidences, dict):
             first_conf = float(confidences.get(first_route, 0.0))
@@ -235,7 +243,9 @@ class RouterAgent:
 
     def route(self, user_message: str, history: str = "") -> str:
         """Return one route label for the given user request."""
-        return str(self.classify(user_message, history=history).get("route", "fallback"))
+        return str(
+            self.classify(user_message, history=history).get("route", "fallback")
+        )
 
     # ── Subtask scoping ───────────────────────────────────────────────────
 
@@ -256,7 +266,9 @@ class RouterAgent:
     # ── Helpers ───────────────────────────────────────────────────────────
 
     @staticmethod
-    def _decision(routes: list[str], confidence: float, reason: str) -> dict[str, object]:
+    def _decision(
+        routes: list[str], confidence: float, reason: str
+    ) -> dict[str, object]:
         return {
             "routes": routes,
             "confidences": {route: confidence for route in routes},

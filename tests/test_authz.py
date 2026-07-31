@@ -97,7 +97,12 @@ def own_order(two_customers: tuple[str, str]) -> str:
 @pytest.mark.parametrize(
     "read_tool",
     [get_order_status, track_order, list_order_items, return_list_order_items],
-    ids=["get_order_status", "track_order", "list_order_items", "return_list_order_items"],
+    ids=[
+        "get_order_status",
+        "track_order",
+        "list_order_items",
+        "return_list_order_items",
+    ],
 )
 def test_read_tools_refuse_another_customers_order(
     read_tool, two_customers: tuple[str, str], victim_order: str
@@ -140,7 +145,7 @@ def test_denial_does_not_reveal_whether_the_order_exists(
 
 
 def test_list_customer_orders_ignores_any_caller_supplied_identity(
-    two_customers: tuple[str, str]
+    two_customers: tuple[str, str],
 ) -> None:
     """The tool exposes no customer_id argument, so B's ID cannot be injected."""
     customer_a, customer_b = two_customers
@@ -167,7 +172,7 @@ def test_recommendation_tools_take_no_customer_argument() -> None:
 
 
 def test_profile_reads_only_the_signed_in_customer(
-    two_customers: tuple[str, str]
+    two_customers: tuple[str, str],
 ) -> None:
     customer_a, customer_b = two_customers
     result = get_customer_profile.invoke({}, config=_cfg(customer_a))
@@ -229,7 +234,7 @@ def test_return_tools_refuse_another_customers_order_item(
 
 
 def test_get_return_status_refuses_another_customers_return(
-    two_customers: tuple[str, str]
+    two_customers: tuple[str, str],
 ) -> None:
     customer_a, customer_b = two_customers
     rows = execute_sql_query_params(
@@ -259,25 +264,32 @@ def test_get_return_status_refuses_another_customers_return(
 def test_customer_tools_refuse_when_not_signed_in(own_order: str) -> None:
     unauthenticated = _cfg(None)
 
-    assert get_order_status.invoke(
-        {"order_id": own_order}, config=unauthenticated
-    ) == NOT_AUTHENTICATED_MESSAGE
-    assert list_order_items.invoke(
-        {"order_id": own_order}, config=unauthenticated
-    ) == NOT_AUTHENTICATED_MESSAGE
-    assert cancel_order.invoke(
-        {"order_id": own_order}, config=unauthenticated
-    ) == NOT_AUTHENTICATED_MESSAGE
-    assert list_customer_orders.invoke(
-        {"limit": 3}, config=unauthenticated
-    ) == NOT_AUTHENTICATED_MESSAGE
+    assert (
+        get_order_status.invoke({"order_id": own_order}, config=unauthenticated)
+        == NOT_AUTHENTICATED_MESSAGE
+    )
+    assert (
+        list_order_items.invoke({"order_id": own_order}, config=unauthenticated)
+        == NOT_AUTHENTICATED_MESSAGE
+    )
+    assert (
+        cancel_order.invoke({"order_id": own_order}, config=unauthenticated)
+        == NOT_AUTHENTICATED_MESSAGE
+    )
+    assert (
+        list_customer_orders.invoke({"limit": 3}, config=unauthenticated)
+        == NOT_AUTHENTICATED_MESSAGE
+    )
     assert get_customer_profile.invoke({}, config=unauthenticated) == (
         NOT_AUTHENTICATED_MESSAGE
     )
-    assert place_order.invoke(
-        {"shipping_address": "1 Test Street, Springfield", "items_json": "[]"},
-        config=unauthenticated,
-    ) == NOT_AUTHENTICATED_MESSAGE
+    assert (
+        place_order.invoke(
+            {"shipping_address": "1 Test Street, Springfield", "items_json": "[]"},
+            config=unauthenticated,
+        )
+        == NOT_AUTHENTICATED_MESSAGE
+    )
 
 
 def test_tools_fail_closed_when_config_is_missing_entirely(own_order: str) -> None:

@@ -62,7 +62,7 @@ def test_conversational_filler_is_dropped() -> None:
 
 
 def test_category_words_are_kept() -> None:
-    """"laptop" discriminates a laptop from a laptop sleeve — it must survive."""
+    """ "laptop" discriminates a laptop from a laptop sleeve — it must survive."""
     assert "laptop" in [t.lower() for t in _title_terms("Dell laptop touchscreen")]
 
 
@@ -125,16 +125,17 @@ def test_limit_is_bounded() -> None:
 
 
 def test_empty_name_is_rejected_gracefully() -> None:
-    assert "provide the product name" in find_product.invoke(
-        {"product_name": "   "}
-    ).lower()
+    assert (
+        "provide the product name"
+        in find_product.invoke({"product_name": "   "}).lower()
+    )
 
 
 @pytest.mark.parametrize("reference", ["the second one", "that one", "it please"])
 def test_bare_reference_sends_the_agent_back_to_the_conversation(
     reference: str,
 ) -> None:
-    """"the second one" is answerable from context, never by asking the customer."""
+    """ "the second one" is answerable from context, never by asking the customer."""
     response = find_product.invoke({"product_name": reference}).lower()
     assert "conversation" in response
     assert "do not ask the customer" in response

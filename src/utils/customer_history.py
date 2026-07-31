@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Optional
 
 from src.data.session_persistence import get_customer_session_history
-from src.memory.conversation_memory import ConversationTurn
 
 
 def format_session_summary(
@@ -15,11 +13,11 @@ def format_session_summary(
 ) -> str:
     """
     Format a single session into a readable summary for LLM context.
-    
+
     Args:
         session_data: Session dictionary from get_customer_session_history
         max_turns: Maximum number of turns to include in summary
-    
+
     Returns:
         Formatted session summary string
     """
@@ -54,12 +52,12 @@ def format_customer_history_context(
 ) -> Optional[str]:
     """
     Retrieve and format a customer's conversation history for LLM context.
-    
+
     Args:
         customer_id: Customer identifier
         num_sessions: Number of recent sessions to retrieve (default: 3)
         max_turns_per_session: Max turns to show per session (default: 3)
-    
+
     Returns:
         Formatted history context string or None if no history exists
     """
@@ -94,14 +92,14 @@ def enrich_message_with_history(
 ) -> str:
     """
     Enrich a user message with customer history context for better LLM responses.
-    
+
     Args:
         user_message: The current user message
         customer_id: Customer identifier
         include_history: Whether to include history (default: True)
         num_sessions: Number of previous sessions to include
         max_turns_per_session: Max turns per session in context
-    
+
     Returns:
         Enriched message with history context prepended
     """
@@ -123,10 +121,10 @@ def enrich_message_with_history(
 def get_customer_topics_from_history(customer_id: str) -> list[str]:
     """
     Extract topics/categories a customer has discussed from their history.
-    
+
     Args:
         customer_id: Customer identifier
-    
+
     Returns:
         List of topics mentioned in customer's conversations
     """
@@ -135,12 +133,34 @@ def get_customer_topics_from_history(customer_id: str) -> list[str]:
 
     keywords = {
         "product": ["product", "item", "thing", "model", "brand", "quality", "feature"],
-        "order": ["order", "purchase", "bought", "ordered", "delivery", "shipped", "tracking"],
+        "order": [
+            "order",
+            "purchase",
+            "bought",
+            "ordered",
+            "delivery",
+            "shipped",
+            "tracking",
+        ],
         "return": ["return", "refund", "exchange", "back", "money back", "issue"],
-        "shipping": ["ship", "delivery", "fast", "slow", "arrive", "package", "tracking"],
+        "shipping": [
+            "ship",
+            "delivery",
+            "fast",
+            "slow",
+            "arrive",
+            "package",
+            "tracking",
+        ],
         "price": ["price", "cost", "expensive", "cheap", "discount", "deal"],
         "complaint": ["broken", "damage", "issue", "problem", "wrong", "not working"],
-        "recommendation": ["suggest", "recommend", "similar", "alternative", "other options"],
+        "recommendation": [
+            "suggest",
+            "recommend",
+            "similar",
+            "alternative",
+            "other options",
+        ],
     }
 
     for session in sessions:
@@ -157,10 +177,10 @@ def get_customer_topics_from_history(customer_id: str) -> list[str]:
 def get_customer_sentiment_summary(customer_id: str) -> dict[str, object]:
     """
     Generate a summary of customer sentiment based on recent interactions.
-    
+
     Args:
         customer_id: Customer identifier
-    
+
     Returns:
         Dictionary with sentiment info and key patterns
     """
@@ -168,7 +188,7 @@ def get_customer_sentiment_summary(customer_id: str) -> dict[str, object]:
 
     total_messages = 0
     issue_count = 0
-    positive_keywords = ["thank", "great", "love", "perfect", "excellent", "amazing"]
+    # positive_keywords = ["thank", "great", "love", "perfect", "excellent", "amazing"]
     negative_keywords = ["broken", "issue", "problem", "bad", "terrible", "upset"]
 
     for session in sessions:

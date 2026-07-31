@@ -53,7 +53,9 @@ def _build_pg_conn_string() -> str | None:
     return f"postgresql://{user}:{pwd}@{host}:{port}/{db}?sslmode=require"
 
 
-def _check_db_tables(conn_string: str, tables: list[str]) -> tuple[bool, list[str], str]:
+def _check_db_tables(
+    conn_string: str, tables: list[str]
+) -> tuple[bool, list[str], str]:
     try:
         conn = psycopg2.connect(conn_string)
         cur = conn.cursor()
@@ -118,13 +120,21 @@ def main() -> None:
         PROJECT_ROOT / "data" / "processed" / "product_catalog.schema.json",
     ]
     paths_ok, missing_paths = _check_paths(required_paths)
-    _print_check(paths_ok, "Required local artifacts", ", ".join(missing_paths) if missing_paths else "all present")
+    _print_check(
+        paths_ok,
+        "Required local artifacts",
+        ", ".join(missing_paths) if missing_paths else "all present",
+    )
     if not paths_ok:
         failures += 1
 
     conn_string = _build_pg_conn_string()
     if conn_string is None:
-        _print_check(False, "PostgreSQL connection config", "missing one or more POSTGRESQL_* variables")
+        _print_check(
+            False,
+            "PostgreSQL connection config",
+            "missing one or more POSTGRESQL_* variables",
+        )
         failures += 1
     else:
         required_tables = [
@@ -136,7 +146,11 @@ def main() -> None:
             "reviews",
         ]
         db_ok, missing_tables, detail = _check_db_tables(conn_string, required_tables)
-        _print_check(db_ok, "PostgreSQL connectivity + required tables", detail if db_ok else f"{detail}; missing: {missing_tables}")
+        _print_check(
+            db_ok,
+            "PostgreSQL connectivity + required tables",
+            detail if db_ok else f"{detail}; missing: {missing_tables}",
+        )
         if not db_ok:
             failures += 1
 

@@ -154,7 +154,9 @@ class CaseResult:
         obtained. It is surfaced separately so an exhausted quota reads as
         "23 cases could not run", never as a low score.
         """
-        return bool(self.error) and bool(_INFRASTRUCTURE_ERROR_PATTERN.search(self.error))
+        return bool(self.error) and bool(
+            _INFRASTRUCTURE_ERROR_PATTERN.search(self.error)
+        )
 
     @property
     def passed(self) -> bool:

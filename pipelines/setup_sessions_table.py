@@ -23,10 +23,10 @@ def main() -> None:
     print("=" * 70)
     print("Customer Sessions Table Migration")
     print("=" * 70)
-    
+
     print("\n[*] Initializing customer_sessions table...")
     initialize_sessions_table()
-    
+
     print("\n[✓] Migration completed successfully!")
     print("\nTable Schema:")
     print("""
@@ -43,7 +43,9 @@ def main() -> None:
         ├── idx_created_at (created_at DESC)
         └── idx_is_active (is_active)
     """)
-    print("\nYou can now use session_persistence functions to store/retrieve conversations.")
+    print(
+        "\nYou can now use session_persistence functions to store/retrieve conversations."
+    )
 
 
 if __name__ == "__main__":

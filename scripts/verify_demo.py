@@ -76,30 +76,34 @@ def main() -> int:
     started = time.time()
 
     # 1. Policy question — must be grounded in the knowledge base.
-    results.append((
-        "policy grounding",
-        show(
-            "Return policy question (expect return route, policy tool)",
-            orchestrator.handle(
-                "How many days do I have to return something?",
-                session_id="verify-policy",
+    results.append(
+        (
+            "policy grounding",
+            show(
+                "Return policy question (expect return route, policy tool)",
+                orchestrator.handle(
+                    "How many days do I have to return something?",
+                    session_id="verify-policy",
+                ),
+                expect_routes=["return"],
             ),
-            expect_routes=["return"],
-        ),
-    ))
+        )
+    )
 
     # 2. Product search — must return real, in-budget products.
-    results.append((
-        "product search",
-        show(
-            "Product search with budget (expect product route)",
-            orchestrator.handle(
-                "Show me wireless headphones under $250",
-                session_id="verify-product",
+    results.append(
+        (
+            "product search",
+            show(
+                "Product search with budget (expect product route)",
+                orchestrator.handle(
+                    "Show me wireless headphones under $250",
+                    session_id="verify-product",
+                ),
+                expect_routes=["product"],
             ),
-            expect_routes=["product"],
-        ),
-    ))
+        )
+    )
 
     # 3. Sticky escalation regression — the single worst bug in the old build.
     print(f"\n{'#' * 78}\n# STICKY ESCALATION REGRESSION\n{'#' * 78}")
@@ -108,31 +112,35 @@ def main() -> int:
         session_id="verify-sticky",
         customer_id=CUSTOMER_ID,
     )
-    results.append((
-        "sticky escalation",
-        show(
-            "Normal product question AFTER an escalation (must NOT re-escalate)",
-            orchestrator.handle(
-                "Anyway, what 4K monitors do you sell?",
-                session_id="verify-sticky",
-                customer_id=CUSTOMER_ID,
+    results.append(
+        (
+            "sticky escalation",
+            show(
+                "Normal product question AFTER an escalation (must NOT re-escalate)",
+                orchestrator.handle(
+                    "Anyway, what 4K monitors do you sell?",
+                    session_id="verify-sticky",
+                    customer_id=CUSTOMER_ID,
+                ),
+                expect_routes=["product"],
             ),
-            expect_routes=["product"],
-        ),
-    ))
+        )
+    )
 
     # 4. Close-chat false positive.
     close_result = orchestrator.handle(
         "when does the return window close?", session_id="verify-close"
     )
-    results.append((
-        "close-chat false positive",
-        show(
-            "'when does the return window close?' must NOT end the session",
-            close_result,
-            expect_routes=["return"],
-        ),
-    ))
+    results.append(
+        (
+            "close-chat false positive",
+            show(
+                "'when does the return window close?' must NOT end the session",
+                close_result,
+                expect_routes=["return"],
+            ),
+        )
+    )
 
     # 5. Multi-intent — two agents, one synthesised reply.
     multi = orchestrator.handle(
@@ -155,15 +163,17 @@ def main() -> int:
     orchestrator.handle(
         "Show me wireless headphones under $250", session_id="verify-memory"
     )
-    results.append((
-        "conversational memory",
-        show(
-            "Follow-up 'which of those is cheapest?' (must resolve the reference)",
-            orchestrator.handle(
-                "which of those is cheapest?", session_id="verify-memory"
+    results.append(
+        (
+            "conversational memory",
+            show(
+                "Follow-up 'which of those is cheapest?' (must resolve the reference)",
+                orchestrator.handle(
+                    "which of those is cheapest?", session_id="verify-memory"
+                ),
             ),
-        ),
-    ))
+        )
+    )
 
     elapsed = time.time() - started
     print(f"\n{'=' * 78}\nSUMMARY ({elapsed:.0f}s total)")

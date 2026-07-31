@@ -43,19 +43,54 @@ _ABS_MAX_SEARCH_ROWS = 20
 
 # Words that almost always indicate a peripheral rather than the main device.
 _ACCESSORY_TERMS: tuple[str, ...] = (
-    "case", "cases", "cover", "sleeve", "pouch", "bag", "backpack",
-    "charger", "charging", "adapter", "adaptor", "cable", "cord", "plug",
-    "stand", "mount", "holder", "dock", "docking", "tripod", "clip",
-    "screen protector", "tempered glass", "skin", "decal", "sticker",
-    "replacement", "spare", "refill", "cleaning kit", "cleaner",
-    "strap", "lanyard", "stylus",
-    "extension", "splitter", "converter", "hub",
+    "case",
+    "cases",
+    "cover",
+    "sleeve",
+    "pouch",
+    "bag",
+    "backpack",
+    "charger",
+    "charging",
+    "adapter",
+    "adaptor",
+    "cable",
+    "cord",
+    "plug",
+    "stand",
+    "mount",
+    "holder",
+    "dock",
+    "docking",
+    "tripod",
+    "clip",
+    "screen protector",
+    "tempered glass",
+    "skin",
+    "decal",
+    "sticker",
+    "replacement",
+    "spare",
+    "refill",
+    "cleaning kit",
+    "cleaner",
+    "strap",
+    "lanyard",
+    "stylus",
+    "extension",
+    "splitter",
+    "converter",
+    "hub",
 )
 
 # Phrases that grammatically subordinate the item to another device,
 # e.g. "Hard Case for MacBook Pro" or "Charger Compatible With Galaxy S21".
 _SUBORDINATE_PATTERNS: tuple[str, ...] = (
-    " for ", "compatible with", "fits ", "replacement for", "designed for",
+    " for ",
+    "compatible with",
+    "fits ",
+    "replacement for",
+    "designed for",
 )
 
 # Sensible price floors for core hardware, applied only when the caller asks
@@ -192,7 +227,9 @@ def search_products(
         "price_asc": "price ASC",
         "price_desc": "price DESC",
         "rating": "average_rating DESC NULLS LAST, rating_count DESC",
-    }.get(sort_by, "(average_rating * LN(GREATEST(rating_count, 1) + 1)) DESC NULLS LAST")
+    }.get(
+        sort_by, "(average_rating * LN(GREATEST(rating_count, 1) + 1)) DESC NULLS LAST"
+    )
 
     # Over-fetch so Python-side accessory filtering still leaves enough rows.
     fetch_limit = bounded_limit * 4 if exclude_accessories else bounded_limit
@@ -207,7 +244,7 @@ def search_products(
                main_category, store, is_bestseller,
                LEFT(COALESCE(NULLIF(features, '[]'), description), 350) AS snippet
         FROM product_catalog
-        WHERE {' AND '.join(where)}
+        WHERE {" AND ".join(where)}
         ORDER BY {order_clause}
         LIMIT %s
     """
@@ -225,7 +262,9 @@ def search_products(
         )
 
     if exclude_accessories:
-        kept = [row for row in rows if not _looks_like_accessory(str(row.get("title", "")))]
+        kept = [
+            row for row in rows if not _looks_like_accessory(str(row.get("title", "")))
+        ]
         # If filtering removed everything, the query was probably *for* an
         # accessory — return the unfiltered results with a note rather than
         # a dead end.

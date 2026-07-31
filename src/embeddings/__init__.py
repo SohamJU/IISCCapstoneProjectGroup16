@@ -4,4 +4,3 @@ from src.embeddings.embedder import SentenceTransformerEmbedder
 from src.embeddings.vector_store import PineconeVectorStore, VectorDocument
 
 __all__ = ["PineconeVectorStore", "SentenceTransformerEmbedder", "VectorDocument"]
-

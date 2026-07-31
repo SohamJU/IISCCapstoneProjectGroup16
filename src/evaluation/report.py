@@ -132,7 +132,9 @@ def _format_routing_section(routing: RoutingReport) -> str:
 
     metrics = routing.per_route_metrics()
     if metrics:
-        lines.append(f"{'route':<18}{'precision':>11}{'recall':>9}{'f1':>7}{'support':>9}")
+        lines.append(
+            f"{'route':<18}{'precision':>11}{'recall':>9}{'f1':>7}{'support':>9}"
+        )
         lines.append("-" * 54)
         for route in sorted(metrics):
             values = metrics[route]
@@ -264,7 +266,11 @@ def format_markdown(
             lines.append(
                 f"- Router errors: {len(routing.errors)} (excluded from the above)"
             )
-        lines += ["", "| Route | Precision | Recall | F1 | Support |", "|---|---:|---:|---:|---:|"]
+        lines += [
+            "",
+            "| Route | Precision | Recall | F1 | Support |",
+            "|---|---:|---:|---:|---:|",
+        ]
         metrics = routing.per_route_metrics()
         for route in sorted(metrics):
             values = metrics[route]

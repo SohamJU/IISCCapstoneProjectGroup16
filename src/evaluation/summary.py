@@ -240,7 +240,10 @@ def build_summary(
     if not failures:
         lines.append("None — every scored case passed.")
     else:
-        lines += ["| Agent | Case | Failed check | What it means |", "|---|---|---|---|"]
+        lines += [
+            "| Agent | Case | Failed check | What it means |",
+            "|---|---|---|---|",
+        ]
         for agent, result in failures:
             names = ", ".join(c.name for c in result.failures) or result.error
             lines.append(

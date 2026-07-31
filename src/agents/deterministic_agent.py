@@ -12,7 +12,13 @@ _RETURN_ID_RE = re.compile(r"RET-\d{6}", re.IGNORECASE)
 class DeterministicSupportAgent:
     """Simple route-scoped deterministic agent used as runtime fallback."""
 
-    def __init__(self, route: str, session_id: str = "default", reason: str = "", debug: bool = False) -> None:
+    def __init__(
+        self,
+        route: str,
+        session_id: str = "default",
+        reason: str = "",
+        debug: bool = False,
+    ) -> None:
         self.route = route
         self.session_id = session_id
         self.reason = reason.strip()
@@ -25,7 +31,9 @@ class DeterministicSupportAgent:
             prefix += f"({self.reason}) "
 
         if self.debug:
-            print(f"[debug] deterministic_agent route={self.route} input={user_message}")
+            print(
+                f"[debug] deterministic_agent route={self.route} input={user_message}"
+            )
 
         message = user_message.strip()
         if self.route == "order":
@@ -53,9 +61,7 @@ class DeterministicSupportAgent:
                     f"{prefix}I detected order {order_match.group(0).upper()}. "
                     "For returns, also provide order_item_id (OI-xxxxxxx) and reason."
                 )
-            return (
-                f"{prefix}For return/refund help, provide order_id, order_item_id, and reason."
-            )
+            return f"{prefix}For return/refund help, provide order_id, order_item_id, and reason."
 
         if self.route == "recommendation":
             return (
@@ -75,9 +81,7 @@ class DeterministicSupportAgent:
                 "low confidence or high-risk indicators."
             )
 
-        return (
-            f"{prefix}I can only help with products, orders, returns, recommendations, and escalation."
-        )
+        return f"{prefix}I can only help with products, orders, returns, recommendations, and escalation."
 
     def reset_memory(self) -> None:
         """No-op for API compatibility."""

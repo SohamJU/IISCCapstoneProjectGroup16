@@ -107,7 +107,9 @@ twitter samples.\
 #: Columns whose sample values are long free text. Including them cost ~1,600
 #: characters of prompt on every ReAct step and taught the model nothing about
 #: how to filter — it never needs to match on a full product description.
-_NO_SAMPLE_COLUMNS = frozenset({"features", "description", "sub_categories", "bought_together"})
+_NO_SAMPLE_COLUMNS = frozenset(
+    {"features", "description", "sub_categories", "bought_together"}
+)
 
 #: Truncate any remaining sample so one outlier row cannot bloat the prompt.
 _MAX_SAMPLE_CHARS = 60

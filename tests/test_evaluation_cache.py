@@ -39,7 +39,10 @@ def test_prompt_hash_tracks_the_question_and_identity() -> None:
     assert prompt_hash(base) != prompt_hash(_case(query="something else"))
 
     other_identity = EvalCase(
-        id="c1", agent="order", query="what did I buy", checks=Checks(),
+        id="c1",
+        agent="order",
+        query="what did I buy",
+        checks=Checks(),
         customer_id="CUST-B",
     )
     assert prompt_hash(base) != prompt_hash(other_identity)
@@ -296,8 +299,11 @@ def test_mean_latency_excludes_reused_cases() -> None:
 
 def _report_with(passed: bool, tags: tuple[str, ...]) -> AgentReport:
     case = EvalCase(
-        id="c1", agent="order", query="q",
-        checks=Checks(must_contain=("alpha",)), tags=tags,
+        id="c1",
+        agent="order",
+        query="q",
+        checks=Checks(must_contain=("alpha",)),
+        tags=tags,
         description="a described case",
     )
     result = CaseResult(case=case, answer="alpha" if passed else "beta")

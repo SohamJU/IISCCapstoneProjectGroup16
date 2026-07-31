@@ -34,10 +34,40 @@ _ADDRESS_MAX_CHARS = 300
 #: laptop sleeve.
 _TITLE_STOPWORDS = frozenset(
     {
-        "the", "and", "for", "with", "from", "this", "that", "these", "those",
-        "your", "our", "you", "one", "ones", "all", "please", "order", "buy",
-        "want", "wanted", "would", "like", "get", "second", "third", "first",
-        "fourth", "fifth", "last", "purchase", "me", "my", "it", "its",
+        "the",
+        "and",
+        "for",
+        "with",
+        "from",
+        "this",
+        "that",
+        "these",
+        "those",
+        "your",
+        "our",
+        "you",
+        "one",
+        "ones",
+        "all",
+        "please",
+        "order",
+        "buy",
+        "want",
+        "wanted",
+        "would",
+        "like",
+        "get",
+        "second",
+        "third",
+        "first",
+        "fourth",
+        "fifth",
+        "last",
+        "purchase",
+        "me",
+        "my",
+        "it",
+        "its",
     }
 )
 
@@ -449,7 +479,7 @@ def place_order(shipping_address: str, items_json: str, config: RunnableConfig) 
     except json.JSONDecodeError:
         return (
             "Invalid items_json format. Provide a JSON list, for example: "
-            "[{\"product_id\":\"B00MCW7G9M\",\"quantity\":1}]"
+            '[{"product_id":"B00MCW7G9M","quantity":1}]'
         )
 
     if not isinstance(items, list) or not items:
@@ -462,7 +492,9 @@ def place_order(shipping_address: str, items_json: str, config: RunnableConfig) 
         return "shipping_address is too long."
 
     if len(items) > _MAX_ITEMS_PER_ORDER:
-        return f"Order supports at most {_MAX_ITEMS_PER_ORDER} line items in one request."
+        return (
+            f"Order supports at most {_MAX_ITEMS_PER_ORDER} line items in one request."
+        )
 
     # Session identity should always resolve to a real customer row. If it does
     # not, the session is malformed — fail rather than writing an orphan order.
@@ -495,8 +527,12 @@ def place_order(shipping_address: str, items_json: str, config: RunnableConfig) 
     consolidated: dict[str, int] = {}
     for item in clean_items:
         product_id = str(item["product_id"])
-        consolidated[product_id] = consolidated.get(product_id, 0) + int(item["quantity"])
-    clean_items = [{"product_id": pid, "quantity": qty} for pid, qty in consolidated.items()]
+        consolidated[product_id] = consolidated.get(product_id, 0) + int(
+            item["quantity"]
+        )
+    clean_items = [
+        {"product_id": pid, "quantity": qty} for pid, qty in consolidated.items()
+    ]
 
     product_ids = [i["product_id"] for i in clean_items]
     product_rows = execute_sql_query_params(

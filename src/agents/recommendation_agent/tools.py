@@ -138,11 +138,11 @@ def recommend_for_customer(
     if isinstance(history_rows, str):
         return history_rows
 
-    purchased_ids = [str(r.get("product_id")) for r in history_rows if r.get("product_id")]
+    purchased_ids = [
+        str(r.get("product_id")) for r in history_rows if r.get("product_id")
+    ]
     category_counter = Counter(
-        str(r.get("main_category"))
-        for r in history_rows
-        if r.get("main_category")
+        str(r.get("main_category")) for r in history_rows if r.get("main_category")
     )
     top_categories = [cat for cat, _ in category_counter.most_common(3)]
 
@@ -157,7 +157,12 @@ def recommend_for_customer(
             ORDER BY average_rating DESC NULLS LAST, rating_count DESC NULLS LAST
             LIMIT %s
             """,
-            (top_categories, budget, purchased_ids if purchased_ids else [""], safe_limit),
+            (
+                top_categories,
+                budget,
+                purchased_ids if purchased_ids else [""],
+                safe_limit,
+            ),
         )
     else:
         rec_rows = execute_sql_query_params(

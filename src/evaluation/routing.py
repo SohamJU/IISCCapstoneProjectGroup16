@@ -68,7 +68,11 @@ class RoutingCase:
     def from_dict(cls, raw: dict) -> RoutingCase:
         if not raw.get("id") or not raw.get("query"):
             raise ValueError(f"routing case needs an id and a query: {raw!r}")
-        if not raw.get("expect_all") and not raw.get("expect_any") and not raw.get("forbid"):
+        if (
+            not raw.get("expect_all")
+            and not raw.get("expect_any")
+            and not raw.get("forbid")
+        ):
             raise ValueError(
                 f"routing case {raw['id']} asserts nothing — "
                 "give it expect_all, expect_any or forbid"
@@ -249,14 +253,18 @@ def load_routing_cases(path: Path = DATASET_PATH) -> list[RoutingCase]:
 
     cases: list[RoutingCase] = []
     seen: set[str] = set()
-    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+    for number, line in enumerate(
+        path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
         stripped = line.strip()
         if not stripped or stripped.startswith("//"):
             continue
         try:
             raw = json.loads(stripped)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"{path.name} line {number}: invalid JSON — {exc}") from exc
+            raise ValueError(
+                f"{path.name} line {number}: invalid JSON — {exc}"
+            ) from exc
 
         case = RoutingCase.from_dict(raw)
         if case.id in seen:

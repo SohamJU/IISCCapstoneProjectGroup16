@@ -536,9 +536,7 @@ def main() -> int:
         args.bins,
         args.log_x,
     )
-    plot_distribution(
-        grouped, summaries, args.output_dir / "latency_distribution.png"
-    )
+    plot_distribution(grouped, summaries, args.output_dir / "latency_distribution.png")
 
     thin = [s.agent for s in summaries if s.too_few]
     print()

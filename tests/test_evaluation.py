@@ -40,19 +40,25 @@ def test_all_checks_pass_on_a_correct_answer() -> None:
         must_not_contain=("ORD-006041",),
         allowed_ids=("ORD-000055",),
     )
-    results = run_checks(checks, "Order ORD-000055 contained 2 items.", ["list_order_items"])
+    results = run_checks(
+        checks, "Order ORD-000055 contained 2 items.", ["list_order_items"]
+    )
     assert all(r.passed for r in results)
 
 
 def test_missing_expected_tool_fails() -> None:
-    results = run_checks(Checks(expect_tools=("list_order_items",)), "Sure!", ["track_order"])
+    results = run_checks(
+        Checks(expect_tools=("list_order_items",)), "Sure!", ["track_order"]
+    )
     failed = [r for r in results if not r.passed]
     assert [r.name for r in failed] == ["calls:list_order_items"]
     assert "track_order" in failed[0].detail
 
 
 def test_forbidden_tool_fails() -> None:
-    results = run_checks(Checks(forbid_tools=("cancel_order",)), "Cancelled.", ["cancel_order"])
+    results = run_checks(
+        Checks(forbid_tools=("cancel_order",)), "Cancelled.", ["cancel_order"]
+    )
     assert any(not r.passed and r.name == "never_calls:cancel_order" for r in results)
 
 
@@ -94,7 +100,9 @@ def test_refusal_detection_accepts_natural_phrasings(answer: str) -> None:
 
 def test_refusal_detection_rejects_a_compliant_answer() -> None:
     results = run_checks(
-        Checks(expect_refusal=True), "Order ORD-000055 contained 2 items totalling $178.", []
+        Checks(expect_refusal=True),
+        "Order ORD-000055 contained 2 items totalling $178.",
+        [],
     )
     assert any(not r.passed and r.name == "is_refusal" for r in results)
 
@@ -146,7 +154,9 @@ def test_case_passes_only_when_every_check_passes() -> None:
     """Strict by design: a partially correct answer is not a pass."""
     result = CaseResult(case=_case())
     result.checks = run_checks(
-        Checks(must_contain=("alpha",), must_not_contain=("beta",)), "alpha and beta", []
+        Checks(must_contain=("alpha",), must_not_contain=("beta",)),
+        "alpha and beta",
+        [],
     )
     assert result.checks_passed == 2  # non_empty + contains
     assert not result.passed
@@ -186,7 +196,7 @@ def test_provider_failures_are_unscored_not_failed(error: str) -> None:
     assert result.infrastructure_error
 
     report = AgentReport(agent="escalation", results=[result])
-    assert report.total == 0        # excluded from the denominator
+    assert report.total == 0  # excluded from the denominator
     assert report.pass_rate == 0.0  # no evidence either way
     assert len(report.unscored) == 1
 
@@ -214,17 +224,20 @@ def test_unscored_cases_are_surfaced_in_reports() -> None:
     assert "could NOT be scored" in console
     markdown = format_markdown([report])
     assert "could not be scored" in markdown
-    assert build_json_payload([report])["agents"]["escalation"][
-        "unscored_provider_errors"
-    ] == 1
+    assert (
+        build_json_payload([report])["agents"]["escalation"]["unscored_provider_errors"]
+        == 1
+    )
 
 
 def test_check_score_reports_partial_credit_separately() -> None:
     result = CaseResult(case=_case())
-    result.checks = run_checks(Checks(must_contain=("alpha", "gamma")), "alpha only", [])
+    result.checks = run_checks(
+        Checks(must_contain=("alpha", "gamma")), "alpha only", []
+    )
     report = AgentReport(agent="order", results=[result])
-    assert report.pass_rate == 0.0          # the case failed outright
-    assert 0.0 < report.check_score < 1.0   # but two of three checks passed
+    assert report.pass_rate == 0.0  # the case failed outright
+    assert 0.0 < report.check_score < 1.0  # but two of three checks passed
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -258,7 +271,9 @@ class _ExplodingAgent:
 def test_runner_passes_case_identity_to_the_agent() -> None:
     """The case's customer_id must reach the agent, or authorization cases are meaningless."""
     agent = _StubAgent()
-    case = EvalCase(id="c", agent="order", query="q", checks=Checks(), customer_id="CUST-A")
+    case = EvalCase(
+        id="c", agent="order", query="q", checks=Checks(), customer_id="CUST-A"
+    )
     run_case(agent, case)
     assert agent.seen_customer_ids == ["CUST-A"]
 
@@ -288,7 +303,10 @@ def test_mutating_cases_run_with_allow_writes() -> None:
 
 def test_unavailable_cases_surface_as_skipped() -> None:
     report = run_agent_cases(
-        "return", _StubAgent(), [], unavailable=[("c9", "no data for {OWN_RETURN}")],
+        "return",
+        _StubAgent(),
+        [],
+        unavailable=[("c9", "no data for {OWN_RETURN}")],
         progress=False,
     )
     assert report.total == 0
@@ -327,7 +345,9 @@ def test_every_dataset_is_valid_and_self_consistent(agent: str, filename: str) -
         assert case_id, f"{filename}: a case is missing an id"
         assert case_id not in seen, f"{filename}: duplicate case id {case_id}"
         seen.add(case_id)
-        assert raw.get("agent") == agent, f"{filename}: {case_id} declares agent {raw.get('agent')}"
+        assert raw.get("agent") == agent, (
+            f"{filename}: {case_id} declares agent {raw.get('agent')}"
+        )
         assert raw.get("query"), f"{filename}: {case_id} has no query"
         assert raw.get("description"), f"{filename}: {case_id} has no description"
         # Parsing must not raise.
@@ -341,7 +361,9 @@ def test_datasets_cover_the_security_dimension() -> None:
         for raw in load_raw_cases(DATASET_DIR / filename):
             if "security" in (raw.get("tags") or []):
                 tagged += 1
-    assert tagged >= 8, f"only {tagged} security cases; the authz regressions are under-covered"
+    assert tagged >= 8, (
+        f"only {tagged} security cases; the authz regressions are under-covered"
+    )
 
 
 def test_every_registered_agent_has_a_dataset_file() -> None:
@@ -415,7 +437,9 @@ def test_wrong_route_is_a_miss() -> None:
 def test_extra_route_is_tolerated_but_recorded() -> None:
     """A second route can be a fair reading, but must not go unnoticed."""
     report = evaluate_routing(
-        _StubRouter(["order", "product"]), [_routing_case(expect_all=["order"])], progress=False
+        _StubRouter(["order", "product"]),
+        [_routing_case(expect_all=["order"])],
+        progress=False,
     )
     assert report.accuracy == 1.0
     assert report.scored[0].extra == ["product"]
@@ -424,7 +448,12 @@ def test_extra_route_is_tolerated_but_recorded() -> None:
 
 def test_multi_intent_requires_every_route() -> None:
     cases = [_routing_case(expect_all=["return", "order"])]
-    assert evaluate_routing(_StubRouter(["return", "order"]), cases, progress=False).accuracy == 1.0
+    assert (
+        evaluate_routing(
+            _StubRouter(["return", "order"]), cases, progress=False
+        ).accuracy
+        == 1.0
+    )
     # Getting only one of the two is a miss, not a half-pass.
     partial = evaluate_routing(_StubRouter(["return"]), cases, progress=False)
     assert partial.accuracy == 0.0
@@ -443,9 +472,18 @@ def test_forbidden_route_fails_the_case() -> None:
 
 def test_expect_any_accepts_either_option() -> None:
     cases = [_routing_case(expect_any=["escalation", "fallback"])]
-    assert evaluate_routing(_StubRouter(["fallback"]), cases, progress=False).accuracy == 1.0
-    assert evaluate_routing(_StubRouter(["escalation"]), cases, progress=False).accuracy == 1.0
-    assert evaluate_routing(_StubRouter(["product"]), cases, progress=False).accuracy == 0.0
+    assert (
+        evaluate_routing(_StubRouter(["fallback"]), cases, progress=False).accuracy
+        == 1.0
+    )
+    assert (
+        evaluate_routing(_StubRouter(["escalation"]), cases, progress=False).accuracy
+        == 1.0
+    )
+    assert (
+        evaluate_routing(_StubRouter(["product"]), cases, progress=False).accuracy
+        == 0.0
+    )
 
 
 def test_single_and_multi_intent_are_reported_separately() -> None:
@@ -489,7 +527,10 @@ def test_per_route_metrics_exclude_ambiguous_cases() -> None:
 def test_per_route_metrics_and_confusion_are_computed() -> None:
     report = evaluate_routing(
         _StubRouter(["product"]),
-        [_routing_case(id="a", expect_all=["order"]), _routing_case(id="b", expect_all=["product"])],
+        [
+            _routing_case(id="a", expect_all=["order"]),
+            _routing_case(id="b", expect_all=["product"]),
+        ],
         progress=False,
     )
     metrics = report.per_route_metrics()
@@ -505,7 +546,9 @@ def test_per_route_metrics_and_confusion_are_computed() -> None:
 
 
 def _sample_report() -> AgentReport:
-    good = CaseResult(case=_case("good"), answer="ORD-000055 has 2 items", tools_used=["t"])
+    good = CaseResult(
+        case=_case("good"), answer="ORD-000055 has 2 items", tools_used=["t"]
+    )
     good.checks = run_checks(Checks(must_contain=("ORD-000055",)), good.answer, ["t"])
     bad = CaseResult(case=_case("bad"), answer="no idea", tools_used=[])
     bad.checks = run_checks(Checks(must_contain=("ORD-000055",)), bad.answer, [])
@@ -533,7 +576,9 @@ def test_json_payload_is_serialisable_and_carries_scores() -> None:
     assert payload["overall"]["passed"] == 1
 
 
-def test_report_directory_is_not_created_as_a_side_effect_of_formatting(tmp_path: Path) -> None:
+def test_report_directory_is_not_created_as_a_side_effect_of_formatting(
+    tmp_path: Path,
+) -> None:
     """Formatting is pure; only write_reports touches the filesystem."""
     format_console([_sample_report()])
     format_markdown([_sample_report()])

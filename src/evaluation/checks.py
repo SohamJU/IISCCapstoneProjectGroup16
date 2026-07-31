@@ -57,19 +57,25 @@ def _normalise(text: str) -> str:
     return normalise_typography(text, strip_thousands=True).lower()
 
 
-def check_expected_tools(expected: tuple[str, ...], actual: list[str]) -> list[CheckResult]:
+def check_expected_tools(
+    expected: tuple[str, ...], actual: list[str]
+) -> list[CheckResult]:
     called = set(actual)
     return [
         CheckResult(
             name=f"calls:{tool}",
             passed=tool in called,
-            detail="" if tool in called else f"tools actually called: {sorted(called) or 'none'}",
+            detail=""
+            if tool in called
+            else f"tools actually called: {sorted(called) or 'none'}",
         )
         for tool in expected
     ]
 
 
-def check_any_expected_tool(expected: tuple[str, ...], actual: list[str]) -> list[CheckResult]:
+def check_any_expected_tool(
+    expected: tuple[str, ...], actual: list[str]
+) -> list[CheckResult]:
     if not expected:
         return []
     called = set(actual)
@@ -83,7 +89,9 @@ def check_any_expected_tool(expected: tuple[str, ...], actual: list[str]) -> lis
     ]
 
 
-def check_forbidden_tools(forbidden: tuple[str, ...], actual: list[str]) -> list[CheckResult]:
+def check_forbidden_tools(
+    forbidden: tuple[str, ...], actual: list[str]
+) -> list[CheckResult]:
     called = set(actual)
     return [
         CheckResult(
@@ -135,7 +143,9 @@ def check_matches(patterns: tuple[str, ...], answer: str) -> list[CheckResult]:
             detail = "" if matched else "pattern did not match"
         except re.error as exc:
             matched, detail = False, f"invalid regex: {exc}"
-        results.append(CheckResult(name=f"matches:{pattern}", passed=matched, detail=detail))
+        results.append(
+            CheckResult(name=f"matches:{pattern}", passed=matched, detail=detail)
+        )
     return results
 
 
@@ -162,13 +172,17 @@ def check_no_invented_ids(allowed: tuple[str, ...], answer: str) -> list[CheckRe
         return []
 
     permitted = {value.upper() for value in allowed}
-    mentioned = {match.upper() for match in _ID_PATTERN.findall(_normalise(answer).upper())}
+    mentioned = {
+        match.upper() for match in _ID_PATTERN.findall(_normalise(answer).upper())
+    }
     invented = sorted(mentioned - permitted)
     return [
         CheckResult(
             name="no_invented_ids",
             passed=not invented,
-            detail="" if not invented else f"answer cites unknown id(s): {', '.join(invented)}",
+            detail=""
+            if not invented
+            else f"answer cites unknown id(s): {', '.join(invented)}",
         )
     ]
 

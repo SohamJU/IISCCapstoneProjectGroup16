@@ -27,7 +27,16 @@ def standard_out_of_scope_message(user_message: str | None = None) -> str:
             "orders, returns, recommendations, and escalation. What would you like help with?"
         )
 
-    if any(token in lowered for token in ["thanks", "thank you", "good morning", "good afternoon", "good evening"]):
+    if any(
+        token in lowered
+        for token in [
+            "thanks",
+            "thank you",
+            "good morning",
+            "good afternoon",
+            "good evening",
+        ]
+    ):
         return (
             "You’re welcome! I can help with product info, orders, returns, recommendations, "
             "or escalation support. What do you need today?"
@@ -191,7 +200,9 @@ def restrict_to_catalog_tables(sql_query: str) -> tuple[bool, str]:
     return True, ""
 
 
-def limit_rows(rows: list[dict[str, Any]], max_rows: int = 5) -> tuple[list[dict[str, Any]], str]:
+def limit_rows(
+    rows: list[dict[str, Any]], max_rows: int = 5
+) -> tuple[list[dict[str, Any]], str]:
     """Trim large result sets to keep token usage bounded."""
     total = len(rows)
     if total <= max_rows:

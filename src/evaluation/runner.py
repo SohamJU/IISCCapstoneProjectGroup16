@@ -73,7 +73,9 @@ def score_cached(case: EvalCase, answer: str, tools_used: list[str]) -> CaseResu
     Checks are applied fresh, so a tightened rubric re-scores stored answers for
     free — only a changed question requires a new call.
     """
-    result = CaseResult(case=case, answer=answer, tools_used=list(tools_used), reused=True)
+    result = CaseResult(
+        case=case, answer=answer, tools_used=list(tools_used), reused=True
+    )
     result.checks = run_checks(case.checks, answer, tools_used)
     return result
 
@@ -150,7 +152,9 @@ def run_agent_cases(
             if result.passed:
                 print(f"PASS ({marker})")
             else:
-                failed = ", ".join(check.name for check in result.failures) or result.error
+                failed = (
+                    ", ".join(check.name for check in result.failures) or result.error
+                )
                 print(f"FAIL ({marker}) — {failed}")
 
     return report
